@@ -95,12 +95,10 @@ export default function ProfileScreen() {
         }
     }, [token]);
 
-    // Підвантаження при відкритті екрану
     useEffect(() => {
         loadProfile();
     }, [loadProfile]);
 
-    // І ще раз при поверненні на вкладку (зручно, якщо профіль міняли на іншому екрані)
     useFocusEffect(
         useCallback(() => {
             loadProfile();

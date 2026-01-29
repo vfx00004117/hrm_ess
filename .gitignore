@@ -47,3 +47,6 @@ app-example
 __pycache__/
 venv/
 build/
+/backend/AddProfile.txt
+/app/git_commit_memo.txt
+/app/startup_memo.txt

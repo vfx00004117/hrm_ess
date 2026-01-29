@@ -15,6 +15,9 @@ class EmployeeProfile(Base):
     position: Mapped[str] = mapped_column(String, nullable=False)
     work_start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
+    department_id: Mapped[int] = mapped_column(Integer, ForeignKey("departments.id", ondelete="SET NULL"), nullable=True, index=True)
+    department = relationship("Department", back_populates="employees", lazy="joined")
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
