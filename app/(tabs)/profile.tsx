@@ -11,6 +11,7 @@ type ProfileOut = {
     employee_number: string | null;
     position: string | null;
     work_start_date: string | null;
+    department_name: string | null;
 };
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://192.168.0.200:8000";
@@ -113,6 +114,7 @@ export default function ProfileScreen() {
             empNo: profile?.employee_number ?? "",
             position: profile?.position ?? "",
             workStart: formatDateUA(profile?.work_start_date),
+            depName: profile?.department_name ?? "",
         };
     }, [profile]);
 
@@ -145,6 +147,9 @@ export default function ProfileScreen() {
                         <View className="h-px bg-slate-100"/>
 
                         <ProfileRow label="Табельний номер" value={viewModel.empNo}/>
+                        <View className="h-px bg-slate-100"/>
+
+                        <ProfileRow label="Підрозділ" value={viewModel.depName}/>
                         <View className="h-px bg-slate-100"/>
 
                         <ProfileRow label="Посада" value={viewModel.position}/>
