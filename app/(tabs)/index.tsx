@@ -1,5 +1,4 @@
 import { Text, View } from "react-native";
-import {Image} from "expo-image";
 import {SafeAreaView} from "react-native-safe-area-context";
 
 export default function Index() {
