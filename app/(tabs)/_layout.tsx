@@ -17,6 +17,8 @@ export default function TabLayout() {
                 options={{
                     title: 'Головна',
                     headerShown: false,
+                    popToTopOnBlur: false,
+                    freezeOnBlur: true,
                     tabBarIcon: ({ focused }) => (
                         <>
                             <MaterialIcons name="home" size={24} color='black'/>
@@ -29,6 +31,8 @@ export default function TabLayout() {
                 options={{
                     title: 'Графік',
                     headerShown: false,
+                    popToTopOnBlur: false,
+                    freezeOnBlur: true,
                     tabBarIcon: ({ focused }) => (
                         <>
                             <MaterialIcons name="calendar-today" size={24} color='black'/>
@@ -41,6 +45,8 @@ export default function TabLayout() {
                 options={{
                     title: 'Сервіси',
                     headerShown: false,
+                    popToTopOnBlur: false,
+                    freezeOnBlur: true,
                     tabBarIcon: ({ focused }) => (
                         <>
                             <MaterialIcons name="edit-document" size={24} color="black" />
@@ -53,6 +59,8 @@ export default function TabLayout() {
                 options={{
                     title: "Заявки",
                     headerShown: false,
+                    popToTopOnBlur: false,
+                    freezeOnBlur: true,
                     //перевіряємо роль, якщо manager - показуємо requests
                     href: isManager ? "/(tabs)/requests" : null,
                     tabBarIcon: ({ focused }) => (
@@ -65,6 +73,8 @@ export default function TabLayout() {
                 options={{
                     title: 'Профіль',
                     headerShown: false,
+                    popToTopOnBlur: false,
+                    freezeOnBlur: true,
                     tabBarIcon: ({ focused }) => (
                         <>
                             <MaterialIcons name="person" size={24} color='black'/>

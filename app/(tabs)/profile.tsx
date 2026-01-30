@@ -1,4 +1,4 @@
-import {Text, View, Pressable, Alert, ActivityIndicator} from 'react-native';
+import {Text, View, Pressable, Alert, ActivityIndicator, ScrollView} from 'react-native';
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {SafeAreaView} from "react-native-safe-area-context";
 import {router, useFocusEffect} from "expo-router";
@@ -119,25 +119,9 @@ export default function ProfileScreen() {
     }, [profile]);
 
     return (
-        <SafeAreaView className="flex-1 bg-slate-50 px-4 pt-4">
-            <Text className="text-2xl font-semibold text-slate-900">Профіль</Text>
-
-            {loading ? (
-                <View className="py-10 items-center">
-                    <ActivityIndicator />
-                    <Text className="text-white/60 mt-3">Завантаження…</Text>
-                </View>
-            ) : errorText ? (
-                <View className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4">
-                    <Text className="text-black">{errorText}</Text>
-
-                    <View className="mt-4">
-                        <Pressable onPress={loadProfile} className="rounded-2xl bg-white py-4 items-center active:bg-blue-100">
-                            <Text className="text-base font-semibold text-black">Спробувати ще</Text>
-                        </Pressable>
-                    </View>
-                </View>
-            ) : (
+        <SafeAreaView className="flex-1 bg-slate-50 px-4">
+            <Text className="text-2xl font-semibold text-slate-900 pb-4">Профіль</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
                 <View className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
                     <View className="gap-4">
                         <ProfileRow label="ПІБ" value={viewModel.fullName}/>
@@ -161,14 +145,27 @@ export default function ProfileScreen() {
                         <ProfileRow label="Початок роботи" value={viewModel.workStart}/>
                     </View>
                 </View>
-            )}
-            <View className="mt-6">
-                <Pressable
-                    onPress={handleSignOut}
-                    className="rounded-2xl bg-red-500 py-4 items-center active:bg-red-600">
-                    <Text className="text-base font-semibold text-white">Вийти</Text>
-                </Pressable>
-            </View>
+                {loading ? (
+                    <View className="py-8 items-center absolute inset-0 justify-center bg-white/60 rounded-2xl">
+                        <ActivityIndicator />
+                        <Text className="text-black/70 mt-3">Завантаження…</Text>
+                    </View>
+                ) : errorText ? (
+                    <View className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mt-4">
+                        <Text className="text-red-700">{errorText}</Text>
+                        <Pressable onPress={() => {loadProfile}} className="mt-3 bg-black/10 px-4 py-3 rounded-xl">
+                            <Text className="text-[#111827]">Спробувати ще</Text>
+                        </Pressable>
+                    </View>
+                ) : null}
+                <View className="mt-4">
+                    <Pressable
+                        onPress={handleSignOut}
+                        className="rounded-2xl bg-red-500 py-4 items-center active:bg-red-600">
+                        <Text className="text-base font-semibold text-white">Вийти</Text>
+                    </Pressable>
+                </View>
+            </ScrollView>
         </SafeAreaView>
     );
 }
