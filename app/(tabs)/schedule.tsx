@@ -1,9 +1,9 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { View, Text, Pressable, ActivityIndicator, ScrollView } from "react-native";
-import {Calendar, DateData, LocaleConfig} from "react-native-calendars";
-import { useFocusEffect } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { View, Text, Pressable, ActivityIndicator, Animated } from "react-native";
+import { Calendar, DateData, LocaleConfig } from "react-native-calendars";
 import { useAuth } from "../(auth)/AuthContext";
-import {SafeAreaView} from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
+import ScrollView = Animated.ScrollView;
 
 LocaleConfig.locales['ua'] = {
     monthNames: [
@@ -30,12 +30,18 @@ LocaleConfig.defaultLocale = 'ua';
 
 type EntryType = "shift" | "off" | "vacation" | "sick" | "trip" | "other";
 
-type MyEntry = {
+type ScheduleEntry = {
     date: string;
     type: EntryType;
     start_time?: string | null;
     end_time?: string | null;
     title?: string | null;
+};
+
+type DeptEmployee = {
+    user_id: number;
+    email: string;
+    full_name?: string | null;
 };
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://192.168.0.200:8000";
@@ -47,7 +53,7 @@ function firstOfMonth(ym: string) {
     return `${ym}-01`;
 }
 
-function bgForMyEntry(e: MyEntry) {
+function bgForMyEntry(e: ScheduleEntry) {
     switch (e.type) {
         case "shift":
             return "#BFD7FF";
@@ -65,9 +71,11 @@ function bgForMyEntry(e: MyEntry) {
 }
 
 export default function ScheduleScreen() {
-    const { token } = useAuth();
+    const { token, role } = useAuth();
+    const isManager = role === "manager";
 
-    const [mode, setMode] = useState<"me" | "dept">("me");
+    const [view, setView] = useState<"me" | "dept">("me");
+
     const [selectedDate, setSelectedDate] = useState<string>(() => {
         const d = new Date();
         const yyyy = d.getFullYear();
@@ -75,58 +83,128 @@ export default function ScheduleScreen() {
         const dd = String(d.getDate()).padStart(2, "0");
         return `${yyyy}-${mm}-${dd}`;
     });
+
     const [monthYM, setMonthYM] = useState(() => ymFromDate(selectedDate));
 
+    const [employeeDropdownOpen, setEmployeeDropdownOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [errorText, setErrorText] = useState<string | null>(null);
 
-    const [myEntries, setMyEntries] = useState<MyEntry[]>([]);
+    const [entries, setEntries] = useState<ScheduleEntry[]>([]);
+
+    const [deptEmployees, setDeptEmployees] = useState<DeptEmployee[]>([]);
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
+
+    const abortRef = useRef<AbortController | null>(null);
+
+    const fetchJson = useCallback(
+        async (url: string) => {
+            const res = await fetch(url, {
+                headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+            });
+            if (res.status === 401) throw new Error("Сесія завершилась. Увійди знову.");
+            if (!res.ok) throw new Error(`Помилка ${res.status}`);
+            return res.json();
+        },
+        [token]
+    );
+
+    const loadEmployeesIfNeeded = useCallback(async () => {
+        if (!isManager || !token) return;
+
+        if (deptEmployees.length > 0) return;
+
+        const data = (await fetchJson(`${API_BASE_URL}/department/me/employees`)) as DeptEmployee[];
+        setDeptEmployees(data);
+
+        if (data.length > 0 && selectedEmployeeId == null) {
+            setSelectedEmployeeId(data[0].user_id);
+        }
+    }, [isManager, token, deptEmployees.length, selectedEmployeeId, fetchJson]);
 
     const loadMonth = useCallback(
         async (ym: string) => {
             if (!token) return;
-
             setLoading(true);
             setErrorText(null);
 
             try {
-                const res = await fetch(`${API_BASE_URL}/schedule/me?month=${ym}`, {
-                    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-                });
-
-                if (res.status === 401) {
-                    setMyEntries([]);
-                    setErrorText("Сесія завершилась. Увійди знову.");
+                if (isManager && view === "dept") {
+                    await loadEmployeesIfNeeded();
+                    if (!selectedEmployeeId) {
+                        setEntries([]);
+                        return;
+                    }
+                    const data = await fetchJson(
+                        `${API_BASE_URL}/schedule/user/${selectedEmployeeId}?month=${ym}`
+                    );
+                    setEntries(data.entries ?? []);
                     return;
                 }
-
-                if (!res.ok) throw new Error(`Не вдалося завантажити графік (${res.status})`);
-
-                const data = await res.json();
-                setMyEntries(data.entries ?? []);
+                const data = await fetchJson(`${API_BASE_URL}/schedule/me?month=${ym}`);
+                setEntries(data.entries ?? []);
             } catch (e: any) {
+                setEntries([]);
                 setErrorText(e?.message ?? "Помилка завантаження");
             } finally {
                 setLoading(false);
             }
         },
-        [token]
+        [token, isManager, view, selectedEmployeeId, fetchJson, loadEmployeesIfNeeded]
     );
 
-    useFocusEffect(
-        useCallback(() => {
-            loadMonth(monthYM);
-        }, [loadMonth, monthYM])
-    );
+    useEffect(() => {
+        if (!token) return;
 
-    const selectedMyEntry = useMemo(() => {
-        return myEntries.find((e) => e.date === selectedDate) ?? null;
-    }, [myEntries, selectedDate]);
+        if (isManager && view === "dept" && !selectedEmployeeId) return;
+
+        abortRef.current?.abort();
+        const controller = new AbortController();
+        abortRef.current = controller;
+
+        (async () => {
+            setLoading(true);
+            setErrorText(null);
+
+            try {
+                const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
+
+                if (isManager && view === "dept") {
+                    const res = await fetch(
+                        `${API_BASE_URL}/schedule/user/${selectedEmployeeId}?month=${monthYM}`,
+                        { headers, signal: controller.signal }
+                    );
+                    if (!res.ok) throw new Error(`Помилка ${res.status}`);
+                    const data = await res.json();
+                    setEntries(data.entries ?? []);
+                } else {
+                    const res = await fetch(`${API_BASE_URL}/schedule/me?month=${monthYM}`, {
+                        headers,
+                        signal: controller.signal,
+                    });
+                    if (!res.ok) throw new Error(`Помилка ${res.status}`);
+                    const data = await res.json();
+                    setEntries(data.entries ?? []);
+                }
+            } catch (e: any) {
+                if (e?.name === "AbortError") return;
+                setEntries([]);
+                setErrorText(e?.message ?? "Помилка завантаження");
+            } finally {
+                if (!controller.signal.aborted) setLoading(false);
+            }
+        })();
+
+        return () => controller.abort();
+    }, [token, isManager, view, selectedEmployeeId, monthYM]);
+
+    const selectedEntry = useMemo(() => {
+        return entries.find((e) => e.date === selectedDate) ?? null;
+    }, [entries, selectedDate]);
 
     const markedDates = useMemo(() => {
         const marks: Record<string, any> = {};
-
-        for (const e of myEntries) {
+        for (const e of entries) {
             const bg = bgForMyEntry(e);
             marks[e.date] = {
                 customStyles: {
@@ -161,19 +239,121 @@ export default function ScheduleScreen() {
         };
 
         return marks;
-    }, [myEntries, selectedDate]);
+    }, [entries, selectedDate]);
 
     return (
-        <SafeAreaView className="flex-1 bg-[#F5F7FB]" edges={['top']}>
-            <ScrollView className="flex-1 bg-[#F5F7FB]" contentContainerStyle={{ padding: 16 }}>
-                <View className="flex-row items-center justify-between mb-3">
-                    <Text className="text-[#111827] text-2xl font-semibold">Графік</Text>
-                </View>
+        <SafeAreaView className="flex-1 bg-[#F5F7FB] ml-4 mr-4">
+            <View className="flex-row items-center pb-4">
+                <Text className="text-[#111827] text-2xl font-semibold">Графік</Text>
+            </View>
 
+            {isManager ? (
+                <View className="flex-row gap-2 mb-4">
+                    <Pressable
+                        onPress={() => {
+                            setView("me");
+                            setSelectedEmployeeId(null);
+                        }}
+                        className={`px-4 py-2 rounded-xl ${view === "me" ? "bg-black/10" : "bg-black/5"}`}
+                    >
+                        <Text className="text-[#111827]">Мій графік</Text>
+                    </Pressable>
+
+                    <Pressable
+                        onPress={() => {
+                            setView("dept");
+                            // список людей підтягнемо і виберемо першого
+                            loadEmployeesIfNeeded();
+                        }}
+                        className={`px-4 py-2 rounded-xl ${view === "dept" ? "bg-black/10" : "bg-black/5"}`}
+                    >
+                        <Text className="text-[#111827]">Графік підрозділу</Text>
+                    </Pressable>
+                </View>
+            ) : null}
+
+            {isManager && view === "dept" ? (
+                <View className="bg-white border border-black/10 rounded-2xl p-3 mb-4">
+                    <Text className="text-[#111827] font-semibold mb-2">Співробітник</Text>
+
+                    {deptEmployees.length === 0 ? (
+                        <Text className="text-black/60">
+                            Немає співробітників у підрозділі або підрозділ не призначений.
+                        </Text>
+                    ) : (
+                        <>
+                            <Pressable
+                                onPress={() => setEmployeeDropdownOpen((v) => !v)}
+                                className="border border-black/20 rounded-xl px-3 py-3 flex-row items-center justify-between"
+                            >
+                                <Text className="text-[#111827]">
+                                    {(() => {
+                                        const emp = deptEmployees.find((e) => e.user_id === selectedEmployeeId);
+                                        return emp?.full_name?.trim()
+                                            ? emp.full_name
+                                            : emp?.email ?? "Обрати співробітника";
+                                    })()}
+                                </Text>
+
+                                <Text className="text-black/50">
+                                    {employeeDropdownOpen ? "▲" : "▼"}
+                                </Text>
+                            </Pressable>
+                            {employeeDropdownOpen ? (
+                                <View className="mt-2 border border-black/10 rounded-xl max-h-60 overflow-hidden">
+                                    <ScrollView>
+                                        {deptEmployees.map((e) => {
+                                            const label = e.full_name?.trim() ? e.full_name : e.email;
+                                            const selected = e.user_id === selectedEmployeeId;
+
+                                            return (
+                                                <Pressable
+                                                    key={e.user_id}
+                                                    onPress={() => {
+                                                        setSelectedEmployeeId(e.user_id);
+                                                        setEmployeeDropdownOpen(false);
+                                                    }}
+                                                    className={`px-3 py-3 ${
+                                                        selected ? "bg-black/10" : "bg-white"
+                                                    }`}
+                                                >
+                                                    <Text className="text-[#111827]">{label}</Text>
+                                                </Pressable>
+                                            );
+                                        })}
+                                    </ScrollView>
+                                </View>
+                            ) : null}
+                        </>
+                    )}
+                </View>
+            ) : null}
+
+            <View className="bg-white border border-black/10 rounded-2xl p-3">
+                <Calendar
+                    current={firstOfMonth(monthYM)}
+                    markingType="custom"
+                    markedDates={markedDates}
+                    onDayPress={(day: DateData) => setSelectedDate(day.dateString)}
+                    onMonthChange={(m) => {
+                        const ym = `${m.year}-${String(m.month).padStart(2, "0")}`;
+                        setMonthYM(ym);
+                        loadMonth(ym);
+                    }}
+                    theme={{
+                        calendarBackground: "#FFFFFF",
+                        monthTextColor: "#111827",
+                        dayTextColor: "#111827",
+                        textDisabledColor: "rgba(17,24,39,0.35)",
+                        arrowColor: "#111827",
+                        todayTextColor: "#111827",
+                        textSectionTitleColor: "rgba(17,24,39,0.55)",
+                    }}
+                />
                 {loading ? (
-                    <View className="py-8 items-center">
+                    <View className="py-8 items-center absolute inset-0 justify-center bg-white/60 rounded-2xl">
                         <ActivityIndicator />
-                        <Text className="text-black/60 mt-3">Завантаження…</Text>
+                        <Text className="text-black/70 mt-3">Завантаження…</Text>
                     </View>
                 ) : errorText ? (
                     <View className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mb-4">
@@ -183,41 +363,20 @@ export default function ScheduleScreen() {
                         </Pressable>
                     </View>
                 ) : null}
+            </View>
 
-                <View className="bg-white border border-black/10 rounded-2xl p-3">
-                    <Calendar
-                        current={firstOfMonth(monthYM)}
-                        markingType="custom"
-                        markedDates={markedDates}
-                        onDayPress={(day: DateData) => setSelectedDate(day.dateString)}
-                        onMonthChange={(m) => {
-                            const ym = `${m.year}-${String(m.month).padStart(2, "0")}`;
-                            setMonthYM(ym);
-                            loadMonth(ym);
-                        }}
-                        theme={{
-                            calendarBackground: "#FFFFFF",
-                            monthTextColor: "#111827",
-                            dayTextColor: "#111827",
-                            textDisabledColor: "rgba(17,24,39,0.35)",
-                            arrowColor: "#111827",
-                            todayTextColor: "#111827",
-                            textSectionTitleColor: "rgba(17,24,39,0.55)",
-                        }}
-                    />
-                </View>
+            <View className="mt-4 bg-white border border-black/10 rounded-2xl p-4">
+                <Text className="text-[#111827] text-lg font-semibold">{selectedDate}</Text>
 
-                <View className="mt-4 bg-white border border-black/10 rounded-2xl p-4">
-                    <Text className="text-[#111827] text-lg font-semibold">{selectedDate}</Text>
+                <Text className="text-black/70 mt-2">
+                    {selectedEntry
+                        ? selectedEntry.type === "shift" || selectedEntry.type === "trip"
+                            ? `${selectedEntry.title}: ${selectedEntry.start_time ?? "?"} – ${selectedEntry.end_time ?? "?"}`
+                            : `${selectedEntry.title}`
+                        : "Немає запису на цей день"}
+                </Text>
 
-                    <Text className="text-black/70 mt-2">
-                        {selectedMyEntry
-                            ? selectedMyEntry.type === "shift" || selectedMyEntry.type === "trip"
-                                ? `${selectedMyEntry.title}: ${selectedMyEntry.start_time ?? "?"} – ${selectedMyEntry.end_time ?? "?"}`
-                                : `${selectedMyEntry.title}`
-                            : "Немає запису на цей день"}
-                    </Text>
-
+                {isManager ? (
                     <Pressable
                         onPress={() => {
                             // TODO: bottom sheet / modal для встановлення типу дня + часів
@@ -226,8 +385,9 @@ export default function ScheduleScreen() {
                     >
                         <Text className="text-[#111827]">Додати / змінити</Text>
                     </Pressable>
-                </View>
-            </ScrollView>
+                ) : null}
+            </View>
+
         </SafeAreaView>
     );
 }

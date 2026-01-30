@@ -51,6 +51,11 @@ class DepartmentOut(BaseModel):
     class Config:
         from_attributes = True
 
+class DepartmentEmployeeOut(BaseModel):
+    user_id: int
+    email: str
+    full_name: Optional[str] = None
+
 class DepartmentCreateIn(BaseModel):
     name: str = Field(min_length=2, max_length=128)
     manager_user_id: Optional[int] = None

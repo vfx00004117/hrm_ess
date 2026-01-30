@@ -11,7 +11,7 @@ from .profile import EmployeeProfile
 from .user import User
 from .schemas import RegisterIn, LoginIn, TokenOut, UserOut, ProfileOut, ScheduleEntryOut, ScheduleDayUpsertIn, \
     ScheduleMonthOut, ScheduleRangeUpsertIn, ScheduleRangeResultOut, DepartmentOut, DepartmentCreateIn, \
-    DepartmentUpdateIn, AssignEmployeeDepartmentIn
+    DepartmentUpdateIn, AssignEmployeeDepartmentIn, DepartmentEmployeeOut
 from .security import hash_password, verify_password, create_access_token
 from .config import settings
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -19,7 +19,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 router = APIRouter()
 bearer = HTTPBearer()
 
-
+# -------------------------------
+# -----------| AUTH |------------
+# -------------------------------
 
 def get_current_user(
         creds: HTTPAuthorizationCredentials = Depends(bearer),
@@ -94,7 +96,9 @@ def me_profile(current_user: User = Depends(get_current_user), db: Session = Dep
         department_name=profile.department.name if profile.department else None,
     )
 
-
+# ------------------------------
+# --------| DEPARTMENT |--------
+# ------------------------------
 
 def require_manager(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role != "manager":
@@ -130,7 +134,91 @@ def assign_employee_department(
     db.commit()
     return {"ok": True, "department_id": prof.department_id}
 
+def assert_user_is_manager(db: Session, user_id: int) -> None:
+    u = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
+    if not u:
+        raise HTTPException(status_code=404, detail="Manager user not found")
+    if u.role != "manager":
+        raise HTTPException(status_code=400, detail="manager_user_id must reference a user with role=manager")
 
+@router.get("/departments", response_model=list[DepartmentOut])
+def list_departments(
+        _: User = Depends(require_manager),
+        db: Session = Depends(get_db),
+):
+    items = db.execute(select(Department).order_by(Department.name.asc())).scalars().all()
+    return items
+
+@router.get("/department/me/employees", response_model=list[DepartmentEmployeeOut])
+def get_my_department_employees(
+        manager: User = Depends(require_manager),
+        db: Session = Depends(get_db),
+):
+    dep = db.execute(
+        select(Department).where(Department.manager_user_id == manager.id)
+    ).scalar_one_or_none()
+
+    if not dep:
+        return []
+
+    profiles = db.execute(
+        select(EmployeeProfile).where(EmployeeProfile.department_id == dep.id)
+    ).scalars().all()
+
+    emails = [p.email for p in profiles]
+    users = db.execute(select(User).where(User.email.in_(emails))).scalars().all()
+    user_by_email = {u.email: u for u in users}
+
+    result: list[DepartmentEmployeeOut] = []
+    for p in profiles:
+        u = user_by_email.get(p.email)
+        if not u:
+            continue
+        result.append(DepartmentEmployeeOut(user_id=u.id, email=p.email, full_name=p.full_name))
+
+    result.sort(key=lambda x: (x.full_name or "").lower())
+    return result
+
+@router.post("/departments", response_model=DepartmentOut, status_code=201)
+def create_department(
+        payload: DepartmentCreateIn,
+        _: User = Depends(require_manager),
+        db: Session = Depends(get_db),
+):
+    if payload.manager_user_id is not None:
+        assert_user_is_manager(db, payload.manager_user_id)
+
+    dep = Department(name=payload.name, manager_user_id=payload.manager_user_id)
+    db.add(dep)
+    db.commit()
+    db.refresh(dep)
+    return dep
+
+@router.put("/departments/{department_id}", response_model=DepartmentOut)
+def update_department(
+        department_id: int,
+        payload: DepartmentUpdateIn,
+        _: User = Depends(require_manager),
+        db: Session = Depends(get_db),
+):
+    dep = db.execute(select(Department).where(Department.id == department_id)).scalar_one_or_none()
+    if not dep:
+        raise HTTPException(status_code=404, detail="Department not found")
+
+    data = payload.model_dump(exclude_unset=True)
+    if "manager_user_id" in data and data["manager_user_id"] is not None:
+        assert_user_is_manager(db, data["manager_user_id"])
+
+    for k, v in data.items():
+        setattr(dep, k, v)
+
+    db.commit()
+    db.refresh(dep)
+    return dep
+
+# --------------------------------
+# ----------| SCHEDULE |----------
+# --------------------------------
 
 def get_user_by_id(db: Session, user_id: int) -> User:
     user = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
@@ -324,57 +412,3 @@ def manager_delete_user_day(
     db.delete(entry)
     db.commit()
     return {"ok": True}
-
-
-
-def assert_user_is_manager(db: Session, user_id: int) -> None:
-    u = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
-    if not u:
-        raise HTTPException(status_code=404, detail="Manager user not found")
-    if u.role != "manager":
-        raise HTTPException(status_code=400, detail="manager_user_id must reference a user with role=manager")
-
-@router.get("/departments", response_model=list[DepartmentOut])
-def list_departments(
-        _: User = Depends(require_manager),
-        db: Session = Depends(get_db),
-):
-    items = db.execute(select(Department).order_by(Department.name.asc())).scalars().all()
-    return items
-
-@router.post("/departments", response_model=DepartmentOut, status_code=201)
-def create_department(
-        payload: DepartmentCreateIn,
-        _: User = Depends(require_manager),
-        db: Session = Depends(get_db),
-):
-    if payload.manager_user_id is not None:
-        assert_user_is_manager(db, payload.manager_user_id)
-
-    dep = Department(name=payload.name, manager_user_id=payload.manager_user_id)
-    db.add(dep)
-    db.commit()
-    db.refresh(dep)
-    return dep
-
-@router.put("/departments/{department_id}", response_model=DepartmentOut)
-def update_department(
-        department_id: int,
-        payload: DepartmentUpdateIn,
-        _: User = Depends(require_manager),
-        db: Session = Depends(get_db),
-):
-    dep = db.execute(select(Department).where(Department.id == department_id)).scalar_one_or_none()
-    if not dep:
-        raise HTTPException(status_code=404, detail="Department not found")
-
-    data = payload.model_dump(exclude_unset=True)
-    if "manager_user_id" in data and data["manager_user_id"] is not None:
-        assert_user_is_manager(db, data["manager_user_id"])
-
-    for k, v in data.items():
-        setattr(dep, k, v)
-
-    db.commit()
-    db.refresh(dep)
-    return dep
