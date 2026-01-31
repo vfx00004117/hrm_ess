@@ -1,27 +1,59 @@
+from __future__ import annotations
+
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy import Column, Date, Integer, String, Time, Text, ForeignKey, UniqueConstraint, select
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
+from sqlalchemy import (
+    Column,
+    Date,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    Time,
+    UniqueConstraint,
+    func,
+    select,
+)
 from sqlalchemy.orm import Session, relationship
-from jose import jwt, JWTError
 
+from .config import settings
 from .db import Base, get_db
 from .department import Department
 from .profile import EmployeeProfile
+from .schemas import (
+    AssignEmployeeDepartmentIn,
+    DepartmentCreateIn,
+    DepartmentEmployeeOut,
+    DepartmentOut,
+    DepartmentUpdateIn,
+    LoginIn,
+    ProfileOut,
+    RegisterIn,
+    ScheduleDayUpsertIn,
+    ScheduleEntryOut,
+    ScheduleMonthOut,
+    ScheduleRangeResultOut,
+    ScheduleRangeUpsertIn,
+    TokenOut,
+    UserOut,
+)
+from .security import create_access_token, hash_password, verify_password
 from .user import User
-from .schemas import RegisterIn, LoginIn, TokenOut, UserOut, ProfileOut, ScheduleEntryOut, ScheduleDayUpsertIn, \
-    ScheduleMonthOut, ScheduleRangeUpsertIn, ScheduleRangeResultOut, DepartmentOut, DepartmentCreateIn, \
-    DepartmentUpdateIn, AssignEmployeeDepartmentIn, DepartmentEmployeeOut
-from .security import hash_password, verify_password, create_access_token
-from .config import settings
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 router = APIRouter()
 bearer = HTTPBearer()
 
-# -------------------------------
-# -----------| AUTH |------------
-# -------------------------------
+
+def _http_401(detail: str = "Invalid token") -> HTTPException:
+    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
+
+
+def _http_403(detail: str) -> HTTPException:
+    return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
+
 
 def get_current_user(
         creds: HTTPAuthorizationCredentials = Depends(bearer),
@@ -32,24 +64,61 @@ def get_current_user(
         payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALG])
         sub = payload.get("sub")
         if not sub:
-            raise HTTPException(status_code=401, detail="Invalid token")
+            raise _http_401()
     except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise _http_401()
 
-    user = db.query(User).filter(User.email == sub).first()
+    user = db.execute(select(User).where(User.email == sub)).scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=401, detail="User not found")
+        raise _http_401("User not found")
     return user
+
+
+def get_user_by_id(db: Session, user_id: int) -> User:
+    user = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+def require_manager(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != "manager":
+        raise _http_403("Manager role required")
+    return current_user
+
+
+def assert_manager_can_edit_target(manager: User, target: User) -> None:
+    if target.role == "manager" and target.id != manager.id:
+        raise _http_403("You cannot edit another manager")
+
+
+def assert_user_is_manager(db: Session, user_id: int) -> None:
+    u = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
+    if not u:
+        raise HTTPException(status_code=404, detail="Manager user not found")
+    if u.role != "manager":
+        raise HTTPException(status_code=400, detail="manager_user_id must reference a user with role=manager")
+
+
+def _month_bounds(month: str) -> tuple[date, date]:
+    """Return [first_day, next_month_first) bounds for YYYY-MM."""
+    year = int(month[:4])
+    mon = int(month[5:7])
+    first_day = date(year, mon, 1)
+    next_month_first = date(year + 1, 1, 1) if mon == 12 else date(year, mon + 1, 1)
+    return first_day, next_month_first
+
+
+# -------------------------------
+# -----------| AUTH |------------
+# -------------------------------
+
 
 @router.post("/auth/register", response_model=UserOut)
 def register(data: RegisterIn, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.email == data.email).first()
+    existing = db.execute(select(User.id).where(User.email == data.email)).scalar_one_or_none()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
-
-    if data.role not in ("employee", "manager"):
-        raise HTTPException(status_code=400, detail="Invalid role")
-
     try:
         password_hash = hash_password(data.password)
     except ValueError as e:
@@ -66,18 +135,25 @@ def register(data: RegisterIn, db: Session = Depends(get_db)):
     db.refresh(user)
     return UserOut(id=user.id, email=user.email, role=user.role)
 
+
 @router.post("/auth/login", response_model=TokenOut)
 def login(data: LoginIn, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == data.email).first()
+    user = db.execute(select(User).where(User.email == data.email)).scalar_one_or_none()
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
     token = create_access_token(sub=user.email, role=user.role)
     return TokenOut(accessToken=token)
 
+
+# ------------------------------
+# ----------| PROFILE |---------
+# ------------------------------
+
+
 # отримати профіль поточного користувача
-@router.get("/me/profile", response_model=ProfileOut)
-def me_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+@router.get("/profile/me", response_model=ProfileOut)
+def get_my_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     profile = db.execute(
         select(EmployeeProfile).where(EmployeeProfile.email == current_user.email)
     ).scalar_one_or_none()
@@ -96,61 +172,23 @@ def me_profile(current_user: User = Depends(get_current_user), db: Session = Dep
         department_name=profile.department.name if profile.department else None,
     )
 
+
 # ------------------------------
 # --------| DEPARTMENT |--------
 # ------------------------------
 
-def require_manager(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != "manager":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager role required")
-    return current_user
 
-@router.put("/employees/{user_id}/department")
-def assign_employee_department(
-        user_id: int,
-        payload: AssignEmployeeDepartmentIn,
-        manager: User = Depends(require_manager),
-        db: Session = Depends(get_db),
-):
-    target_user = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
-    if not target_user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    if target_user.role == "manager" and target_user.id != manager.id:
-        raise HTTPException(status_code=403, detail="You cannot edit another manager")
-
-    prof = db.execute(select(EmployeeProfile).where(EmployeeProfile.email == target_user.email)).scalar_one_or_none()
-    if not prof:
-        prof = EmployeeProfile(email=target_user.email)
-        db.add(prof)
-    if payload.department_id is None:
-        prof.department_id = None
-    else:
-        dep = db.execute(select(Department).where(Department.id == payload.department_id)).scalar_one_or_none()
-        if not dep:
-            raise HTTPException(status_code=404, detail="Department not found")
-        prof.department_id = dep.id
-
-    db.commit()
-    return {"ok": True, "department_id": prof.department_id}
-
-def assert_user_is_manager(db: Session, user_id: int) -> None:
-    u = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
-    if not u:
-        raise HTTPException(status_code=404, detail="Manager user not found")
-    if u.role != "manager":
-        raise HTTPException(status_code=400, detail="manager_user_id must reference a user with role=manager")
-
-@router.get("/departments", response_model=list[DepartmentOut])
-def list_departments(
+@router.get("/departments/display", response_model=list[DepartmentOut])
+def display_all_departments(
         _: User = Depends(require_manager),
         db: Session = Depends(get_db),
 ):
     items = db.execute(select(Department).order_by(Department.name.asc())).scalars().all()
     return items
 
-@router.get("/department/me/employees", response_model=list[DepartmentEmployeeOut])
-def get_my_department_employees(
+
+@router.get("/department/display/me/employees", response_model=list[DepartmentEmployeeOut])
+def display_my_employees(
         manager: User = Depends(require_manager),
         db: Session = Depends(get_db),
 ):
@@ -161,25 +199,23 @@ def get_my_department_employees(
     if not dep:
         return []
 
-    profiles = db.execute(
-        select(EmployeeProfile).where(EmployeeProfile.department_id == dep.id)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(User.id, EmployeeProfile.email, EmployeeProfile.full_name)
+            .join(EmployeeProfile, EmployeeProfile.email == User.email)
+            .where(EmployeeProfile.department_id == dep.id)
+            .order_by(func.lower(func.coalesce(EmployeeProfile.full_name, "")))
+        )
+        .all()
+    )
 
-    emails = [p.email for p in profiles]
-    users = db.execute(select(User).where(User.email.in_(emails))).scalars().all()
-    user_by_email = {u.email: u for u in users}
+    return [
+        DepartmentEmployeeOut(user_id=user_id, email=email, full_name=full_name)
+        for user_id, email, full_name in rows
+    ]
 
-    result: list[DepartmentEmployeeOut] = []
-    for p in profiles:
-        u = user_by_email.get(p.email)
-        if not u:
-            continue
-        result.append(DepartmentEmployeeOut(user_id=u.id, email=p.email, full_name=p.full_name))
 
-    result.sort(key=lambda x: (x.full_name or "").lower())
-    return result
-
-@router.post("/departments", response_model=DepartmentOut, status_code=201)
+@router.post("/department/create", response_model=DepartmentOut, status_code=201)
 def create_department(
         payload: DepartmentCreateIn,
         _: User = Depends(require_manager),
@@ -194,7 +230,38 @@ def create_department(
     db.refresh(dep)
     return dep
 
-@router.put("/departments/{department_id}", response_model=DepartmentOut)
+
+@router.put("/department/add/{user_id}")
+def assign_employee_department(
+        user_id: int,
+        payload: AssignEmployeeDepartmentIn,
+        manager: User = Depends(require_manager),
+        db: Session = Depends(get_db),
+):
+    target = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    assert_manager_can_edit_target(manager, target)
+
+    prof = db.execute(select(EmployeeProfile).where(EmployeeProfile.email == target.email)).scalar_one_or_none()
+    if not prof:
+        prof = EmployeeProfile(email=target.email)
+        db.add(prof)
+
+    if payload.department_id is None:
+        prof.department_id = None
+    else:
+        dep = db.execute(select(Department).where(Department.id == payload.department_id)).scalar_one_or_none()
+        if not dep:
+            raise HTTPException(status_code=404, detail="Department not found")
+        prof.department_id = dep.id
+
+    db.commit()
+    return {"ok": True, "department_id": prof.department_id}
+
+
+@router.put("/departments/update/{department_id}", response_model=DepartmentOut)
 def update_department(
         department_id: int,
         payload: DepartmentUpdateIn,
@@ -216,22 +283,11 @@ def update_department(
     db.refresh(dep)
     return dep
 
+
 # --------------------------------
 # ----------| SCHEDULE |----------
 # --------------------------------
 
-def get_user_by_id(db: Session, user_id: int) -> User:
-    user = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
-
-def assert_manager_can_edit_target(manager: User, target: User) -> None:
-    if target.role == "manager" and target.id != manager.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You cannot edit another manager"
-        )
 
 class WorkEntry(Base):
     __tablename__ = "work_entries"
@@ -252,21 +308,15 @@ class WorkEntry(Base):
         UniqueConstraint("user_id", "date", name="uq_work_entries_user_date"),
     )
 
+
 # отримати графік за певний місяць
-@router.get("/schedule/me", response_model=ScheduleMonthOut)
-def get_my_schedule_month(
+@router.get("/schedule/display/me", response_model=ScheduleMonthOut)
+def get_my_month_schedule(
         month: str = Query(..., pattern=r"^\d{4}-\d{2}$"),
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db),
 ):
-    year = int(month[:4])
-    mon = int(month[5:7])
-
-    first_day = date(year, mon, 1)
-    if mon == 12:
-        next_month_first = date(year + 1, 1, 1)
-    else:
-        next_month_first = date(year, mon + 1, 1)
+    first_day, next_month_first = _month_bounds(month)
 
     entries = db.execute(
         select(WorkEntry)
@@ -278,20 +328,17 @@ def get_my_schedule_month(
 
     return ScheduleMonthOut(month=month, entries=entries)
 
+
 # для менеджера - отримати графік будь-якого співробітника
-@router.get("/schedule/user/{user_id}", response_model=ScheduleMonthOut)
-def manager_get_user_schedule_month(
+@router.get("/schedule/display/{user_id}", response_model=ScheduleMonthOut)
+def get_user_schedule_for_month(
         user_id: int,
         month: str = Query(..., pattern=r"^\d{4}-\d{2}$"),
         _: User = Depends(require_manager),
         db: Session = Depends(get_db),
 ):
     user = get_user_by_id(db, user_id)
-
-    year = int(month[:4])
-    mon = int(month[5:7])
-    first_day = date(year, mon, 1)
-    next_month_first = date(year + 1, 1, 1) if mon == 12 else date(year, mon + 1, 1)
+    first_day, next_month_first = _month_bounds(month)
 
     entries = db.execute(
         select(WorkEntry)
@@ -303,9 +350,10 @@ def manager_get_user_schedule_month(
 
     return ScheduleMonthOut(month=month, entries=entries)
 
+
 # для менеджера - вставити подію в графік будь-якого співробітника
-@router.put("/schedule/user/{user_id}/day", response_model=ScheduleEntryOut)
-def manager_upsert_user_day(
+@router.put("/schedule/add/day/{user_id}", response_model=ScheduleEntryOut)
+def add_user_schedule_for_day(
         user_id: int,
         payload: ScheduleDayUpsertIn,
         manager: User = Depends(require_manager),
@@ -333,9 +381,10 @@ def manager_upsert_user_day(
     db.refresh(entry)
     return entry
 
+
 # для менеджера - вставити в графік будь-якого співробітника діапазон подій
-@router.put("/schedule/user/{user_id}/range", response_model=ScheduleRangeResultOut)
-def manager_upsert_user_range(
+@router.put("/schedule/add/range/{user_id}/", response_model=ScheduleRangeResultOut)
+def add_user_schedule_for_range(
         user_id: int,
         payload: ScheduleRangeUpsertIn,
         manager: User = Depends(require_manager),
@@ -386,9 +435,10 @@ def manager_upsert_user_range(
     db.commit()
     return ScheduleRangeResultOut(created=created, updated=updated, skipped=skipped)
 
+
 # для менеджера - видалити запис в графіку будь-якого співробітника
-@router.delete("/schedule/user/{user_id}/day")
-def manager_delete_user_day(
+@router.delete("/schedule/delete/day/{user_id}")
+def delete_user_schedule_for_day(
         user_id: int,
         date_str: str = Query(..., alias="date", pattern=r"^\d{4}-\d{2}-\d{2}$"),
         manager: User = Depends(require_manager),
