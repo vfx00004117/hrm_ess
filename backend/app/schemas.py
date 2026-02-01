@@ -35,6 +35,7 @@ class ProfileCreateIn(BaseModel):
     employee_number: Optional[str] = None
     position: Optional[str] = None
     work_start_date: Optional[date] = None
+    department_id: Optional[int] = None
 
 class ProfileOut(BaseModel):
     email: EmailStr

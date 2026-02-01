@@ -67,7 +67,7 @@ export default function ProfileScreen() {
         setErrorText(null);
 
         try {
-            const res = await fetch(`${API_BASE_URL}/profile/me`, {
+            const res = await fetch(`${API_BASE_URL}/employee/profile/me`, {
                 method: "GET",
                 headers: {
                     Authorization: `Bearer ${token}`,

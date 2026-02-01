@@ -38,7 +38,7 @@ from .schemas import (
     ScheduleRangeResultOut,
     ScheduleRangeUpsertIn,
     TokenOut,
-    UserOut,
+    UserOut, ProfileCreateIn,
 )
 from .security import create_access_token, hash_password, verify_password
 from .user import User
@@ -146,13 +146,13 @@ def login(data: LoginIn, db: Session = Depends(get_db)):
     return TokenOut(accessToken=token)
 
 
-# ------------------------------
-# ----------| PROFILE |---------
-# ------------------------------
+# -------------------------------
+# ----------| EMPLOYEE |---------
+# -------------------------------
 
 
 # отримати профіль поточного користувача
-@router.get("/profile/me", response_model=ProfileOut)
+@router.get("/employee/profile/me", response_model=ProfileOut)
 def get_my_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     profile = db.execute(
         select(EmployeeProfile).where(EmployeeProfile.email == current_user.email)
@@ -173,12 +173,60 @@ def get_my_profile(current_user: User = Depends(get_current_user), db: Session =
     )
 
 
+@router.put("/employee/profile/add/{user.id}", response_model=ProfileOut)
+def add_or_update_profile(
+        user_id: int,
+        payload: ProfileCreateIn,
+        manager: User = Depends(require_manager),
+        db: Session = Depends(get_db),
+):
+    target = get_user_by_id(db, user_id)
+    assert_manager_can_edit_target(manager, target)
+
+    profile = db.execute(
+        select(EmployeeProfile).where(EmployeeProfile.email == target.email)
+    ).scalar_one_or_none()
+
+    # якщо профілю немає — створюємо
+    if not profile:
+        profile = EmployeeProfile(email=target.email)
+        db.add(profile)
+
+    data = payload.model_dump(exclude_unset=True)
+
+    # перевірка підрозділу (якщо передали)
+    if "department_id" in data and data["department_id"] is not None:
+        dep = db.execute(
+            select(Department).where(Department.id == data["department_id"])
+        ).scalar_one_or_none()
+        if not dep:
+            raise HTTPException(status_code=404, detail="Department not found")
+
+    # оновлюємо лише передані поля
+    for key, value in data.items():
+        setattr(profile, key, value)
+
+    db.commit()
+    db.refresh(profile)
+
+    return ProfileOut(
+        email=profile.email,
+        full_name=profile.full_name,
+        birth_date=profile.birth_date,
+        employee_number=profile.employee_number,
+        position=profile.position,
+        work_start_date=profile.work_start_date,
+        department_id=profile.department_id,
+        department_name=profile.department.name if profile.department else None,
+    )
+
+
 # ------------------------------
 # --------| DEPARTMENT |--------
 # ------------------------------
 
 
-@router.get("/department/display", response_model=list[DepartmentOut])
+@router.get("/department/all", response_model=list[DepartmentOut])
 def display_all_departments(
         _: User = Depends(require_manager),
         db: Session = Depends(get_db),
@@ -187,7 +235,7 @@ def display_all_departments(
     return items
 
 
-@router.get("/department/display/employees", response_model=list[DepartmentEmployeeOut])
+@router.get("/department/employees", response_model=list[DepartmentEmployeeOut])
 def display_my_employees(
         manager: User = Depends(require_manager),
         db: Session = Depends(get_db),
@@ -310,7 +358,7 @@ class WorkEntry(Base):
 
 
 # отримати графік за певний місяць
-@router.get("/schedule/display/me", response_model=ScheduleMonthOut)
+@router.get("/schedule/me", response_model=ScheduleMonthOut)
 def get_my_month_schedule(
         month: str = Query(..., pattern=r"^\d{4}-\d{2}$"),
         current_user: User = Depends(get_current_user),
@@ -330,7 +378,7 @@ def get_my_month_schedule(
 
 
 # для менеджера - отримати графік будь-якого співробітника
-@router.get("/schedule/display/{user_id}", response_model=ScheduleMonthOut)
+@router.get("/schedule/{user_id}", response_model=ScheduleMonthOut)
 def get_user_schedule_for_month(
         user_id: int,
         month: str = Query(..., pattern=r"^\d{4}-\d{2}$"),
@@ -352,7 +400,7 @@ def get_user_schedule_for_month(
 
 
 # для менеджера - вставити подію в графік будь-якого співробітника
-@router.put("/schedule/add/day/{user_id}", response_model=ScheduleEntryOut)
+@router.put("/schedule/day/{user_id}", response_model=ScheduleEntryOut)
 def add_user_schedule_for_day(
         user_id: int,
         payload: ScheduleDayUpsertIn,
@@ -383,7 +431,7 @@ def add_user_schedule_for_day(
 
 
 # для менеджера - вставити в графік будь-якого співробітника діапазон подій
-@router.put("/schedule/add/range/{user_id}/", response_model=ScheduleRangeResultOut)
+@router.put("/schedule/range/{user_id}/", response_model=ScheduleRangeResultOut)
 def add_user_schedule_for_range(
         user_id: int,
         payload: ScheduleRangeUpsertIn,
@@ -437,7 +485,7 @@ def add_user_schedule_for_range(
 
 
 # для менеджера - видалити запис в графіку будь-якого співробітника
-@router.delete("/schedule/delete/day/{user_id}")
+@router.delete("/schedule/delete/{user_id}")
 def delete_user_schedule_for_day(
         user_id: int,
         date_str: str = Query(..., alias="date", pattern=r"^\d{4}-\d{2}-\d{2}$"),
