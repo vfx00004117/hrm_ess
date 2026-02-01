@@ -20,10 +20,21 @@ class LoginIn(BaseModel):
 class TokenOut(BaseModel):
     accessToken: str
 
+# ------------------------------
+# ----------| PROFILE |---------
+# ------------------------------
+
 class UserOut(BaseModel):
     id: int
     email: EmailStr
     role: str
+
+class ProfileCreateIn(BaseModel):
+    full_name: Optional[str] = None
+    birth_date: Optional[date] = None
+    employee_number: Optional[str] = None
+    position: Optional[str] = None
+    work_start_date: Optional[date] = None
 
 class ProfileOut(BaseModel):
     email: EmailStr
@@ -113,9 +124,6 @@ class ScheduleDayUpsertIn(BaseModel):
             raise ValueError("start_time must be earlier than end_time")
 
         return self
-
-class ManagerDayUpsertIn(ScheduleDayUpsertIn):
-    pass
 
 class ScheduleRangeUpsertIn(BaseModel):
     start_date: date

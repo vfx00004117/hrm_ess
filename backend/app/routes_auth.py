@@ -178,7 +178,7 @@ def get_my_profile(current_user: User = Depends(get_current_user), db: Session =
 # ------------------------------
 
 
-@router.get("/departments/display", response_model=list[DepartmentOut])
+@router.get("/department/display", response_model=list[DepartmentOut])
 def display_all_departments(
         _: User = Depends(require_manager),
         db: Session = Depends(get_db),
@@ -187,7 +187,7 @@ def display_all_departments(
     return items
 
 
-@router.get("/department/display/me/employees", response_model=list[DepartmentEmployeeOut])
+@router.get("/department/display/employees", response_model=list[DepartmentEmployeeOut])
 def display_my_employees(
         manager: User = Depends(require_manager),
         db: Session = Depends(get_db),

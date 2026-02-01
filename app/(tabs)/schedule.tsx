@@ -114,7 +114,7 @@ export default function ScheduleScreen() {
 
         if (deptEmployees.length > 0) return;
 
-        const data = (await fetchJson(`${API_BASE_URL}/department/me/employees`)) as DeptEmployee[];
+        const data = (await fetchJson(`${API_BASE_URL}/department/display/employees`)) as DeptEmployee[];
         setDeptEmployees(data);
 
         if (data.length > 0 && selectedEmployeeId == null) {
@@ -136,12 +136,12 @@ export default function ScheduleScreen() {
                         return;
                     }
                     const data = await fetchJson(
-                        `${API_BASE_URL}/schedule/user/${selectedEmployeeId}?month=${ym}`
+                        `${API_BASE_URL}/schedule/display/${selectedEmployeeId}?month=${ym}`
                     );
                     setEntries(data.entries ?? []);
                     return;
                 }
-                const data = await fetchJson(`${API_BASE_URL}/schedule/me?month=${ym}`);
+                const data = await fetchJson(`${API_BASE_URL}/schedule/display/me?month=${ym}`);
                 setEntries(data.entries ?? []);
             } catch (e: any) {
                 setEntries([]);
@@ -171,14 +171,14 @@ export default function ScheduleScreen() {
 
                 if (isManager && view === "dept") {
                     const res = await fetch(
-                        `${API_BASE_URL}/schedule/user/${selectedEmployeeId}?month=${monthYM}`,
+                        `${API_BASE_URL}/schedule/display/${selectedEmployeeId}?month=${monthYM}`,
                         { headers, signal: controller.signal }
                     );
                     if (!res.ok) throw new Error(`Помилка ${res.status}`);
                     const data = await res.json();
                     setEntries(data.entries ?? []);
                 } else {
-                    const res = await fetch(`${API_BASE_URL}/schedule/me?month=${monthYM}`, {
+                    const res = await fetch(`${API_BASE_URL}/schedule/display/me?month=${monthYM}`, {
                         headers,
                         signal: controller.signal,
                     });
