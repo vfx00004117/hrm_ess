@@ -1,7 +1,7 @@
 from __future__ import annotations
 from sqlalchemy import Integer, String, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship, mapped_column, Mapped
-from .db import Base
+from ..database import Base
 
 
 class Department(Base):

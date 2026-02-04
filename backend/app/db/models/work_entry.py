@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import Column, Date, ForeignKey, Integer, String, Text, Time, UniqueConstraint
 from sqlalchemy.orm import relationship
 
-from ..db import Base
+from ..database import Base
 
 
 class WorkEntry(Base):

@@ -1,13 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .db import Base, engine
+from .db.database import Base, engine
 
-from .models import work_entry
+from .db import models
 
 from .routers import auth, department, employee, schedule
 
-app = FastAPI(title="HRM Auth API")
+app = FastAPI(title="HRM API")
 
 Base.metadata.create_all(bind=engine)
 

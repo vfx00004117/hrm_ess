@@ -4,11 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..db import get_db
-from ..department import Department
-from ..profile import EmployeeProfile
+from ..db.database import get_db
+from ..db.models.department import Department
+from ..db.models.profile import EmployeeProfile
 from ..schemas import ProfileCreateIn, ProfileOut
-from ..user import User
+from ..db.models.user import User
 from ..dependencies import (
     assert_manager_can_edit_target,
     get_current_user,

@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..db import get_db
-from ..models.work_entry import WorkEntry
+from ..db.database import get_db
+from ..db.models.work_entry import WorkEntry
 from ..schemas import (
     ScheduleDayUpsertIn,
     ScheduleEntryOut,
@@ -15,7 +15,7 @@ from ..schemas import (
     ScheduleRangeResultOut,
     ScheduleRangeUpsertIn,
 )
-from ..user import User
+from ..db.models.user import User
 from ..dependencies import (
     assert_manager_can_edit_target,
     get_current_user,

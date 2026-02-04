@@ -9,8 +9,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .config import settings
-from .db import get_db
-from .user import User
+from .db.database import get_db
+from .db.models.user import User
 
 bearer = HTTPBearer()
 
