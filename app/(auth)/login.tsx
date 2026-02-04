@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, Alert } from "react-native";
 import { useRouter } from "expo-router";
+import { API_BASE_URL } from "@/lib/config";
 import { useAuth } from "./AuthContext";
 
 export default function LoginScreen() {
@@ -14,7 +15,7 @@ export default function LoginScreen() {
     async function onLogin() {
         setLoading(true);
         try {
-            const res = await fetch("http://192.168.0.200:8000/auth/login", {
+            const res = await fetch(`${API_BASE_URL}/auth/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password }),

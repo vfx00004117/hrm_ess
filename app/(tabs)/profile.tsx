@@ -2,6 +2,7 @@ import {Text, View, Pressable, Alert, ActivityIndicator, ScrollView} from 'react
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {SafeAreaView} from "react-native-safe-area-context";
 import {router, useFocusEffect} from "expo-router";
+import { API_BASE_URL } from "@/lib/config";
 import { useAuth } from "@/app/(auth)/AuthContext";
 
 type ProfileOut = {
@@ -13,8 +14,6 @@ type ProfileOut = {
     work_start_date: string | null;
     department_name: string | null;
 };
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://192.168.0.200:8000";
 
 function formatDateUA(value: string | null | undefined) {
     if (!value) return "";
