@@ -1,7 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routes_auth import router as auth_router
+
 from .db import Base, engine
+
+from .models import work_entry
+
+from .routers import auth, department, employee, schedule
 
 app = FastAPI(title="HRM Auth API")
 
@@ -15,4 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth_router)
+app.include_router(auth.router)
+app.include_router(employee.router)
+app.include_router(department.router)
+app.include_router(schedule.router)
