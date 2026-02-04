@@ -20,9 +20,9 @@ class LoginIn(BaseModel):
 class TokenOut(BaseModel):
     accessToken: str
 
-# ------------------------------
-# ----------| PROFILE |---------
-# ------------------------------
+# -------------------------------
+# ----------| EMPLOYEE |---------
+# -------------------------------
 
 class UserOut(BaseModel):
     id: int

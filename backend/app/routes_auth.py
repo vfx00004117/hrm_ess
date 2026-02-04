@@ -344,7 +344,7 @@ class WorkEntry(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
     date = Column(Date, nullable=False, index=True)
-    type = Column(String(16), nullable=False)  # shift/off/leave/sick/trip/other
+    type = Column(String(16), nullable=False)
 
     start_time = Column(Time, nullable=True)
     end_time = Column(Time, nullable=True)
