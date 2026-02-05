@@ -152,7 +152,7 @@ export default function ProfileScreen() {
                 ) : errorText ? (
                     <View className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mt-4">
                         <Text className="text-red-700">{errorText}</Text>
-                        <Pressable onPress={() => {loadProfile}} className="mt-3 bg-black/10 px-4 py-3 rounded-xl">
+                        <Pressable onPress={() => loadProfile()} className="mt-3 bg-black/10 px-4 py-3 rounded-xl">
                             <Text className="text-[#111827]">Спробувати ще</Text>
                         </Pressable>
                     </View>
