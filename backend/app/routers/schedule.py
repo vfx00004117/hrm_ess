@@ -64,6 +64,35 @@ def get_user_schedule_for_month(
     return ScheduleMonthOut(month=month, entries=entries)
 
 
+@router.put("/schedule/add/me", response_model=ScheduleEntryOut)
+def add_my_schedule_for_day(
+        payload: ScheduleDayUpsertIn,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db),
+):
+    entry = (
+        db.execute(
+            select(WorkEntry)
+            .where(WorkEntry.user_id == current_user.id)
+            .where(WorkEntry.date == payload.date)
+        )
+        .scalar_one_or_none()
+    )
+
+    if not entry:
+        entry = WorkEntry(user_id=current_user.id, date=payload.date)
+        db.add(entry)
+
+    entry.type = payload.type
+    entry.start_time = payload.start_time
+    entry.end_time = payload.end_time
+    entry.title = payload.title
+
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+
 @router.put("/schedule/day/{user_id}", response_model=ScheduleEntryOut)
 def add_user_schedule_for_day(
         user_id: int,
