@@ -40,6 +40,7 @@ export default function LoginScreen() {
             <TextInput
                 className="border rounded-xl px-4 py-3"
                 placeholder="Email"
+                placeholderTextColor="gray"
                 autoCapitalize="none"
                 value={email}
                 onChangeText={setEmail}
@@ -47,6 +48,7 @@ export default function LoginScreen() {
             <TextInput
                 className="border rounded-xl px-4 py-3"
                 placeholder="Password"
+                placeholderTextColor="gray"
                 secureTextEntry
                 value={password}
                 onChangeText={setPassword}

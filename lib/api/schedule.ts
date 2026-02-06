@@ -1,5 +1,26 @@
 import type { DeptEmployee, ScheduleEntry } from "../schedule/types";
 
+async function handleResponseError(res: Response) {
+    if (res.status === 401) throw new Error("Сесія завершилась");
+
+    let message = `Помилка ${res.status}`;
+    try {
+        const data = await res.json();
+        if (data.detail) {
+            if (typeof data.detail === "string") {
+                message = data.detail;
+            } else if (Array.isArray(data.detail)) {
+                message = data.detail.map((d: any) => d.msg || JSON.stringify(d)).join("; ");
+            } else {
+                message = JSON.stringify(data.detail);
+            }
+        }
+    } catch {
+        // ignore parsing error, use default message
+    }
+    throw new Error(message);
+}
+
 export async function fetchJson<T>(
     url: string,
     token: string,
@@ -13,8 +34,9 @@ export async function fetchJson<T>(
         signal,
     });
 
-    if (res.status === 401) throw new Error("Сесія завершилась");
-    if (!res.ok) throw new Error(`Помилка ${res.status}`);
+    if (!res.ok) {
+        await handleResponseError(res);
+    }
 
     return res.json();
 }
@@ -58,4 +80,62 @@ export async function getDeptEmployees(
         token,
         signal
     );
+}
+
+export async function upsertDaySchedule(
+    base: string,
+    token: string,
+    payload: {
+        date: string;
+        type: string;
+        start_time?: string | null;
+        end_time?: string | null;
+        title?: string | null;
+    },
+    targetUserId?: number | null
+) {
+    const url = targetUserId
+        ? `${base}/schedule/day/${targetUserId}`
+        : `${base}/schedule/day/me`;
+
+    const res = await fetch(url, {
+        method: "PUT",
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+        await handleResponseError(res);
+    }
+
+    return res.json();
+}
+
+export async function deleteDaySchedule(
+    base: string,
+    token: string,
+    date: string,
+    targetUserId?: number | null
+) {
+    const url = targetUserId
+        ? `${base}/schedule/day/${targetUserId}?date=${date}`
+        : `${base}/schedule/day/me?date=${date}`;
+
+    const res = await fetch(url, {
+        method: "DELETE",
+        headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+        },
+    });
+
+    if (!res.ok) {
+        await handleResponseError(res);
+    }
+
+    return res.json();
 }

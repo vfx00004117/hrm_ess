@@ -7,6 +7,7 @@ type AuthState = {
     isReady: boolean;
     token: string | null;
     role: Role | null;
+    userId: number | null;
     signIn: (token: string) => Promise<void>;
     signOut: () => Promise<void>;
 };
@@ -17,6 +18,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isReady, setIsReady] = useState(false);
     const [token, setToken] = useState<string | null>(null);
     const [role, setRole] = useState<Role | null>(null);
+    const [userId, setUserId] = useState<number | null>(null);
 
     useEffect(() => {
         (async () => {
@@ -25,9 +27,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setToken(stored);
                 const payload = decodeJwtPayload(stored);
                 setRole((payload?.role ?? payload?.roles?.[0] ?? null) as Role | null);
+                setUserId(payload?.uid ? Number(payload.uid) : null);
             } else {
                 setToken(null);
                 setRole(null);
+                setUserId(null);
             }
             setIsReady(true);
         })();
@@ -37,18 +41,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isReady,
         token,
         role,
+        userId,
         signIn: async (newToken: string) => {
             await setAccessToken(newToken);
             setToken(newToken);
             const payload = decodeJwtPayload(newToken);
             setRole((payload?.role ?? payload?.roles?.[0] ?? null) as Role | null);
+            setUserId(payload?.uid ? Number(payload.uid) : null);
         },
         signOut: async () => {
             await clearAccessToken();
             setToken(null);
             setRole(null);
+            setUserId(null);
         },
-    }), [isReady, token, role]);
+    }), [isReady, token, role, userId]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

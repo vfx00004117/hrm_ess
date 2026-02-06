@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "../(auth)/AuthContext";
@@ -12,9 +12,12 @@ import { todayISO, ymFromDate } from "@/lib/schedule/utils";
 import { useScheduleMonth } from "@/hooks/schedule/useScheduleMonth";
 import { EmployeePicker } from "@/components/schedule/EmployeePicker";
 import { ScheduleCalendar } from "@/components/schedule/ScheduleCalendar";
+import { ScheduleEditModal } from "@/components/schedule/ScheduleEditModal";
+import { deleteDaySchedule, upsertDaySchedule } from "@/lib/api/schedule";
+import type { EntryType } from "@/lib/schedule/types";
 
 export default function ScheduleScreen() {
-    const { token, role } = useAuth();
+    const { token, role, userId } = useAuth();
     const isManager = role === "manager";
 
     // Локаль календаря — один раз
@@ -30,6 +33,8 @@ export default function ScheduleScreen() {
     const [deptEmployees, setDeptEmployees] = useState<DeptEmployee[]>([]);
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
 
+    const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+
     const { entries, entryByDate, loading, errorText, reload } = useScheduleMonth({
         apiBase: API_BASE_URL,
         token,
@@ -43,6 +48,51 @@ export default function ScheduleScreen() {
     });
 
     const selectedEntry = entryByDate.get(selectedDate) ?? null;
+
+    const handleSaveEntry = async (payload: {
+        type: EntryType;
+        start_time?: string | null;
+        end_time?: string | null;
+        title?: string | null;
+    }) => {
+        try {
+            const targetId = view === "dept" ? selectedEmployeeId : null;
+            await upsertDaySchedule(
+                API_BASE_URL,
+                token || "",
+                { ...payload, date: selectedDate },
+                targetId
+            );
+            setIsEditModalVisible(false);
+            reload();
+        } catch (e: any) {
+            Alert.alert("Помилка", e.message || "Помилка при збереженні");
+        }
+    };
+
+    const handleDeleteEntry = async () => {
+        if (!selectedEntry) return;
+        try {
+            const isDept = view === "dept";
+            const targetId = isDept ? selectedEmployeeId : null;
+
+            if (isDept && !targetId) {
+                Alert.alert("Помилка", "Спочатку оберіть співробітника");
+                return;
+            }
+
+            await deleteDaySchedule(
+                API_BASE_URL,
+                token || "",
+                selectedDate,
+                targetId
+            );
+            setIsEditModalVisible(false);
+            reload();
+        } catch (e: any) {
+            Alert.alert("Помилка", e.message || "Помилка при видаленні");
+        }
+    };
 
     const detailsText = useMemo(() => {
         if (!selectedEntry) return "Немає запису на цей день";
@@ -128,7 +178,11 @@ export default function ScheduleScreen() {
                 {isManager ? (
                     <Pressable
                         onPress={() => {
-                            // TODO: Відкрити модалку/боттом-шітк для створення/редагування запису
+                            if (view === "dept" && !selectedEmployeeId) {
+                                Alert.alert("Помилка", "Спочатку оберіть співробітника");
+                                return;
+                            }
+                            setIsEditModalVisible(true);
                         }}
                         className="mt-4 bg-black/10 px-4 py-3 rounded-xl"
                     >
@@ -136,6 +190,15 @@ export default function ScheduleScreen() {
                     </Pressable>
                 ) : null}
             </View>
+
+            <ScheduleEditModal
+                visible={isEditModalVisible}
+                onClose={() => setIsEditModalVisible(false)}
+                onSave={handleSaveEntry}
+                onDelete={handleDeleteEntry}
+                entry={selectedEntry}
+                date={selectedDate}
+            />
         </SafeAreaView>
     );
 }

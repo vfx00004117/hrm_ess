@@ -36,5 +36,5 @@ def login(data: LoginIn, db: Session = Depends(get_db)):
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
-    token = create_access_token(sub=user.email, role=user.role)
+    token = create_access_token(sub=user.email, role=user.role, uid=user.id)
     return TokenOut(accessToken=token)

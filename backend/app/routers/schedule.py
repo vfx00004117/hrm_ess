@@ -64,7 +64,7 @@ def get_user_schedule_for_month(
     return ScheduleMonthOut(month=month, entries=entries)
 
 
-@router.put("/schedule/add/me", response_model=ScheduleEntryOut)
+@router.put("/schedule/day/me", response_model=ScheduleEntryOut)
 def add_my_schedule_for_day(
         payload: ScheduleDayUpsertIn,
         current_user: User = Depends(get_current_user),
@@ -182,7 +182,33 @@ def add_user_schedule_for_range(
     return ScheduleRangeResultOut(created=created, updated=updated, skipped=skipped)
 
 
-@router.delete("/schedule/delete/{user_id}")
+@router.delete("/schedule/day/me")
+def delete_my_schedule_for_day(
+        date_str: str = Query(..., alias="date", pattern=r"^\d{4}-\d{2}-\d{2}$"),
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db),
+):
+    y, m, d = date_str.split("-")
+    day = date(int(y), int(m), int(d))
+
+    entry = (
+        db.execute(
+            select(WorkEntry)
+            .where(WorkEntry.user_id == current_user.id)
+            .where(WorkEntry.date == day)
+        )
+        .scalar_one_or_none()
+    )
+
+    if not entry:
+        return {"ok": True}
+
+    db.delete(entry)
+    db.commit()
+    return {"ok": True}
+
+
+@router.delete("/schedule/day/{user_id}")
 def delete_user_schedule_for_day(
         user_id: int,
         date_str: str = Query(..., alias="date", pattern=r"^\d{4}-\d{2}-\d{2}$"),
