@@ -90,13 +90,11 @@ export function ScheduleEditModal({
             transparent={true}
             onRequestClose={onClose}>
             <View className="flex-1 shadow">
-                <Pressable
-                    className="absolute inset-0"
-                    onPress={onClose}/>
-                <SafeAreaView style={{ flex: 1 }} edges={["bottom"]} pointerEvents="box-none">
-                    <View style={{ flex: 1, justifyContent: "flex-end" }} pointerEvents="box-none">
+                <Pressable className="absolute inset-0" onPress={onClose}/>
+                <SafeAreaView className="flex-1" edges={[]} pointerEvents="box-none">
+                    <View className="flex-1 justify-end" pointerEvents="box-none">
                         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} pointerEvents="box-none">
-                            <View className="bg-white rounded-t-3xl px-6 pt-3" onStartShouldSetResponder={() => true}>
+                            <View className="bg-white rounded-t-3xl px-6 pt-3 pb-4" onStartShouldSetResponder={() => true}>
                                 <View className="flex-row justify-between items-center mb-5">
                                     <View>
                                         <Text className="text-xl font-bold text-[#111827]">
@@ -125,14 +123,16 @@ export function ScheduleEditModal({
                                         ))}
                                     </View>
 
-                                    {(type === "shift" || type === "trip" || type === "other") && (
+                                    {(type) && (
                                         <>
                                             <Text className="text-sm font-semibold text-black/60 mb-2">Назва (необов'язково)</Text>
                                             <TextInput
                                                 value={title}
                                                 onChangeText={setTitle}
                                                 placeholder="Наприклад: Ранкова зміна"
-                                                className="bg-black/5 rounded-xl px-4 py-3 mb-4 text-black"/>
+                                                placeholderTextColor="gray"
+                                                className="bg-black/5 rounded-xl px-4 py-3 mb-4 text-black"
+                                            />
                                         </>
                                     )}
 
@@ -144,7 +144,8 @@ export function ScheduleEditModal({
                                                     value={startTime}
                                                     onChangeText={setStartTime}
                                                     placeholder="09:00"
-                                                    className="bg-black/5 rounded-xl px-4 py-3 text-black"/>
+                                                    className="bg-black/5 rounded-xl px-4 py-3 text-black"
+                                                />
                                             </View>
                                             <View className="flex-1">
                                                 <Text className="text-sm font-semibold text-black/60 mb-2">Кінець</Text>
@@ -152,7 +153,8 @@ export function ScheduleEditModal({
                                                     value={endTime}
                                                     onChangeText={setEndTime}
                                                     placeholder="18:00"
-                                                    className="bg-black/5 rounded-xl px-4 py-3 text-black"/>
+                                                    className="bg-black/5 rounded-xl px-4 py-3 text-black"
+                                                />
                                             </View>
                                         </View>
                                     )}

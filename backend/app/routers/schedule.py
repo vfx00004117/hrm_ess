@@ -15,6 +15,7 @@ from ..schemas import (
     ScheduleRangeResultOut,
     ScheduleRangeUpsertIn,
 )
+from ..utils import log_schedule_change
 from ..db.models.user import User
 from ..dependencies import (
     assert_manager_can_edit_target,
@@ -82,6 +83,9 @@ def add_my_schedule_for_day(
     if not entry:
         entry = WorkEntry(user_id=current_user.id, date=payload.date)
         db.add(entry)
+        action = "створено"
+    else:
+        action = "оновлено"
 
     entry.type = payload.type
     entry.start_time = payload.start_time
@@ -90,6 +94,15 @@ def add_my_schedule_for_day(
 
     db.commit()
     db.refresh(entry)
+
+    log_schedule_change(
+        author=current_user,
+        target_user=current_user,
+        date=str(payload.date),
+        action=action,
+        details=f"Тип: {payload.type}, Час: {payload.start_time}-{payload.end_time}, Заголовок: {payload.title}"
+    )
+
     return entry
 
 
@@ -115,6 +128,9 @@ def add_user_schedule_for_day(
     if not entry:
         entry = WorkEntry(user_id=target.id, date=payload.date)
         db.add(entry)
+        action = "створено"
+    else:
+        action = "оновлено"
 
     entry.type = payload.type
     entry.start_time = payload.start_time
@@ -123,6 +139,15 @@ def add_user_schedule_for_day(
 
     db.commit()
     db.refresh(entry)
+
+    log_schedule_change(
+        author=manager,
+        target_user=target,
+        date=str(payload.date),
+        action=action,
+        details=f"Тип: {payload.type}, Час: {payload.start_time}-{payload.end_time}, Заголовок: {payload.title}"
+    )
+
     return entry
 
 
@@ -179,6 +204,15 @@ def add_user_schedule_for_range(
         entry.title = payload.title
 
     db.commit()
+
+    log_schedule_change(
+        author=manager,
+        target_user=target,
+        date=f"{payload.start_date} - {payload.end_date}",
+        action="оновлення діапазону",
+        details=f"Створено: {created}, Оновлено: {updated}, Пропущено: {skipped}. Тип: {payload.type}, Час: {payload.start_time}-{payload.end_time}"
+    )
+
     return ScheduleRangeResultOut(created=created, updated=updated, skipped=skipped)
 
 
@@ -205,6 +239,15 @@ def delete_my_schedule_for_day(
 
     db.delete(entry)
     db.commit()
+
+    log_schedule_change(
+        author=current_user,
+        target_user=current_user,
+        date=str(day),
+        action="видалено",
+        details="Видалено запис у розкладі"
+    )
+
     return {"ok": True}
 
 
@@ -235,4 +278,13 @@ def delete_user_schedule_for_day(
 
     db.delete(entry)
     db.commit()
+
+    log_schedule_change(
+        author=manager,
+        target_user=target,
+        date=str(day),
+        action="видалено",
+        details="Видалено запис у розкладі менеджером"
+    )
+
     return {"ok": True}
