@@ -50,3 +50,5 @@ build/
 /backend/AddProfile.txt
 /app/git_commit_memo.txt
 /app/startup_memo.txt
+/schedule_changes.log
+/profile_changes.log

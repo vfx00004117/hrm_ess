@@ -118,10 +118,10 @@ export default function ProfileScreen() {
     }, [profile]);
 
     return (
-        <SafeAreaView className="flex-1 bg-slate-50 px-4">
-            <Text className="text-2xl font-semibold text-slate-900 pb-4">Профіль</Text>
-            <ScrollView showsVerticalScrollIndicator={false}>
-                <View className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
+        <SafeAreaView className="flex-1 bg-slate-50 px-4" edges={['top']}>
+            <Text className="text-3xl font-bold mb-3">Профіль</Text>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-5">
+                <View className="rounded-2xl bg-white p-4 shadow-sm">
                     <View className="gap-4">
                         <ProfileRow label="ПІБ" value={viewModel.fullName}/>
                         <View className="h-px bg-slate-100"/>
@@ -160,7 +160,7 @@ export default function ProfileScreen() {
                 <View className="mt-4">
                     <Pressable
                         onPress={handleSignOut}
-                        className="rounded-2xl bg-red-500 py-4 items-center active:bg-red-600">
+                        className="rounded-2xl bg-red-500 py-4 items-center active:bg-red-600 border border-red-500/20">
                         <Text className="text-base font-semibold text-white">Вийти</Text>
                     </Pressable>
                 </View>

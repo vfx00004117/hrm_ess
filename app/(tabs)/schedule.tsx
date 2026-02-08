@@ -110,9 +110,9 @@ export default function ScheduleScreen() {
     }, [selectedEntry]);
 
     return (
-        <SafeAreaView className="flex-1 bg-[#F5F7FB] ml-4 mr-4">
-            <View className="flex-row items-center pb-4">
-                <Text className="text-[#111827] text-2xl font-semibold">Графік</Text>
+        <SafeAreaView className="flex-1 bg-slate-50 px-4" edges={['top']}>
+            <View className="flex-row items-center">
+                <Text className="text-3xl font-bold mb-3">Графік</Text>
             </View>
 
             {isManager ? (

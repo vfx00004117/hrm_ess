@@ -160,12 +160,12 @@ export function ScheduleEditModal({
                                     )}
 
                                     <View className="mt-4 gap-3">
-                                        <Pressable onPress={handleSave} className="bg-[#111827] py-4 rounded-2xl items-center">
+                                        <Pressable onPress={handleSave} className="bg-emerald-600/90 py-4 rounded-2xl items-center border border-emerald-700/60">
                                             <Text className="text-white font-bold text-lg">Зберегти</Text>
                                         </Pressable>
 
                                         {entry && (
-                                            <Pressable onPress={onDelete} className="bg-red-500/20 py-4 rounded-2xl items-center border border-red-500/20">
+                                            <Pressable onPress={onDelete} className="bg-red-500/30 py-4 rounded-2xl items-center border border-red-500/20">
                                                 <Text className="text-red-600 font-bold text-lg">Видалити</Text>
                                             </Pressable>
                                         )}

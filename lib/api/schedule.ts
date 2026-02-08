@@ -1,6 +1,6 @@
 import type { DeptEmployee, ScheduleEntry } from "../schedule/types";
 
-async function handleResponseError(res: Response) {
+export async function handleResponseError(res: Response) {
     if (res.status === 401) throw new Error("Сесія завершилась");
 
     let message = `Помилка ${res.status}`;

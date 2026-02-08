@@ -21,6 +21,7 @@ from ..dependencies import (
     get_user_by_id,
     require_manager,
 )
+from ..utils import log_profile_change
 
 router = APIRouter(tags=["department"])
 
@@ -74,7 +75,11 @@ def assign_employee_department(
     if not prof:
         prof = EmployeeProfile(email=target.email)
         db.add(prof)
+        action = "створено профіль"
+    else:
+        action = "оновлено профіль"
 
+    old_dept = prof.department_id
     if payload.department_id is None:
         prof.department_id = None
     else:
@@ -83,7 +88,17 @@ def assign_employee_department(
             raise HTTPException(status_code=404, detail="Department not found")
         prof.department_id = dep.id
 
-    db.commit()
+    if old_dept != prof.department_id:
+        db.commit()
+        log_profile_change(
+            author=manager,
+            target_user=target,
+            action=action,
+            details=f"department_id: {old_dept} -> {prof.department_id}"
+        )
+    else:
+        db.commit()
+
     return {"ok": True, "department_id": prof.department_id}
 
 

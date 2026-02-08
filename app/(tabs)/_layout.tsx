@@ -55,16 +55,15 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
-                name="requests"
+                name="staff"
                 options={{
-                    title: "Заявки",
+                    title: "Персонал",
                     headerShown: false,
                     popToTopOnBlur: false,
                     freezeOnBlur: true,
-                    //перевіряємо роль, якщо manager - показуємо requests
-                    href: isManager ? "/(tabs)/requests" : null,
+                    href: isManager ? "/(tabs)/staff" : null,
                     tabBarIcon: ({ focused }) => (
-                        <MaterialIcons name="assignment" size={24} color='black' />
+                        <MaterialIcons name="people-alt" size={24} color='black' />
                     ),
                 }}
             />

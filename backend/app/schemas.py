@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, model_validator, field_validator
-from datetime import date, time
+from datetime import date, time, datetime
 from typing import Literal, Optional
 
 # -------------------------------
@@ -173,3 +173,44 @@ class ScheduleRangeResultOut(BaseModel):
     created: int
     updated: int
     skipped: int
+
+# --------------------------------
+# -------| SERVICE REQUEST |-------
+# --------------------------------
+
+class ServiceRequestCreateIn(BaseModel):
+    type: Literal["off", "vacation", "sick"]
+    start_date: date
+    end_date: date
+
+    @model_validator(mode="after")
+    def validate_dates(self):
+        if self.start_date > self.end_date:
+            raise ValueError("start_date must be <= end_date")
+        return self
+
+class ServiceRequestOut(BaseModel):
+    id: int
+    user_id: int
+    user_email: Optional[str] = None
+    user_full_name: Optional[str] = None
+    type: str
+    start_date: date
+    end_date: date
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+    @model_validator(mode="before")
+    @classmethod
+    def extract_user_info(cls, data):
+        if hasattr(data, "user") and data.user:
+            data.user_email = data.user.email
+            if hasattr(data.user, "profile") and data.user.profile:
+                data.user_full_name = data.user.profile.full_name
+        return data
+
+class ServiceRequestUpdateStatusIn(BaseModel):
+    status: Literal["approved", "rejected"]

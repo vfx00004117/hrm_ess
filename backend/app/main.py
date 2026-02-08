@@ -5,7 +5,7 @@ from .db.database import Base, engine
 
 from .db import models
 
-from .routers import auth, department, employee, schedule
+from .routers import auth, department, employee, schedule, service_request
 
 app = FastAPI(title="HRM API")
 
@@ -23,3 +23,4 @@ app.include_router(auth.router)
 app.include_router(employee.router)
 app.include_router(department.router)
 app.include_router(schedule.router)
+app.include_router(service_request.router)
