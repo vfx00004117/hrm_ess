@@ -16,35 +16,34 @@ import { ScheduleEditModal } from "@/components/schedule/ScheduleEditModal";
 import { deleteDaySchedule, upsertDaySchedule } from "@/lib/api/schedule";
 import type { EntryType } from "@/lib/schedule/types";
 
+setupCalendarLocaleUA();
+
 export default function ScheduleScreen() {
     const { token, role, userId } = useAuth();
     const isManager = role === "manager";
-
-    // Локаль календаря — один раз
-    useEffect(() => {
-        setupCalendarLocaleUA();
-    }, []);
 
     const [view, setView] = useState<"me" | "dept">("me");
 
     const [selectedDate, setSelectedDate] = useState(() => todayISO());
     const [monthYM, setMonthYM] = useState(() => ymFromDate(todayISO()));
 
-    const [deptEmployees, setDeptEmployees] = useState<DeptEmployee[]>([]);
-    const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
-
     const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 
-    const { entries, entryByDate, loading, errorText, reload } = useScheduleMonth({
+    const {
+        entries,
+        entryByDate,
+        loading,
+        errorText,
+        reload,
+        deptEmployees,
+        selectedEmployeeId,
+        setSelectedEmployeeId,
+    } = useScheduleMonth({
         apiBase: API_BASE_URL,
         token,
         isManager,
         view,
         monthYM,
-        deptEmployees,
-        setDeptEmployees,
-        selectedEmployeeId,
-        setSelectedEmployeeId,
     });
 
     const selectedEntry = entryByDate.get(selectedDate) ?? null;
@@ -97,13 +96,11 @@ export default function ScheduleScreen() {
     const detailsText = useMemo(() => {
         if (!selectedEntry) return "Немає запису на цей день";
 
-        const title = selectedEntry.title?.trim();
-        const base = title ? title : selectedEntry.type;
+        const { title, type, start_time, end_time } = selectedEntry;
+        const base = title?.trim() || type;
 
-        if (selectedEntry.type === "shift" || selectedEntry.type === "trip") {
-            const s = selectedEntry.start_time ?? "?";
-            const e = selectedEntry.end_time ?? "?";
-            return `${base}: ${s} – ${e}`;
+        if (type === "shift" || type === "trip") {
+            return `${base}: ${start_time ?? "?"} – ${end_time ?? "?"}`;
         }
 
         return base;
@@ -130,7 +127,6 @@ export default function ScheduleScreen() {
                     <Pressable
                         onPress={() => {
                             setView("dept");
-                            // якщо список порожній — hook сам підтягне при першому load
                         }}
                         className={`px-4 py-2 rounded-xl ${view === "dept" ? "bg-black/10" : "bg-black/5"}`}
                     >

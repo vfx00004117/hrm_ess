@@ -21,7 +21,7 @@ from ..dependencies import (
     get_user_by_id,
     require_manager,
 )
-from ..utils import log_profile_change
+from ..logger import log_profile_change
 
 router = APIRouter(tags=["department"])
 
@@ -40,7 +40,7 @@ def display_my_employees(manager: User = Depends(require_manager), db: Session =
     rows = (
         db.execute(
             select(User.id, EmployeeProfile.email, EmployeeProfile.full_name)
-            .join(EmployeeProfile, EmployeeProfile.email == User.email)
+            .join(User, EmployeeProfile.email == User.email)
             .where(EmployeeProfile.department_id == dep.id)
             .order_by(func.lower(func.coalesce(EmployeeProfile.full_name, "")))
         ).all()

@@ -1,4 +1,4 @@
-import { fetchJson, handleResponseError } from "./schedule";
+import { fetchJson, handleResponseError } from "./client";
 
 export interface ServiceRequest {
     id: number;

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from ..db.database import get_db
 from ..db.models.department import Department
@@ -15,7 +15,7 @@ from ..dependencies import (
     get_user_by_id,
     require_manager,
 )
-from ..utils import log_profile_change
+from ..logger import log_profile_change
 
 router = APIRouter(tags=["employee"])
 
@@ -36,7 +36,9 @@ def profile_to_out(profile: EmployeeProfile) -> ProfileOut:
 @router.get("/employee/profile/me", response_model=ProfileOut)
 def get_my_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     profile = db.execute(
-        select(EmployeeProfile).where(EmployeeProfile.email == current_user.email)
+        select(EmployeeProfile)
+        .options(joinedload(EmployeeProfile.department))
+        .where(EmployeeProfile.email == current_user.email)
     ).scalar_one_or_none()
 
     if not profile:
@@ -48,19 +50,18 @@ def get_my_profile(current_user: User = Depends(get_current_user), db: Session =
 @router.get("/employee/profile/{user_id}", response_model=ProfileOut)
 def get_employee_profile(
     user_id: int,
-    manager: User = Depends(require_manager),
+    _: User = Depends(require_manager),
     db: Session = Depends(get_db)
 ):
     target = get_user_by_id(db, user_id)
-    # Тут ми не використовуємо assert_manager_can_edit_target, 
-    # але перевіряємо чи він в тому ж департаменті або чи це сам менеджер
     
     profile = db.execute(
-        select(EmployeeProfile).where(EmployeeProfile.email == target.email)
+        select(EmployeeProfile)
+        .options(joinedload(EmployeeProfile.department))
+        .where(EmployeeProfile.email == target.email)
     ).scalar_one_or_none()
 
     if not profile:
-        # Якщо профілю немає, повертаємо порожній з email
         return ProfileOut(email=target.email)
 
     return profile_to_out(profile)

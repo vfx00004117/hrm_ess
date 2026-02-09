@@ -6,9 +6,6 @@ import {
 import {SafeAreaView} from "react-native-safe-area-context";
 import { MenuCard } from '@/components/common/MenuCard';
 import ScheduleRequest from '@/components/services/ScheduleRequest';
-import { setupCalendarLocaleUA } from '@/lib/calendar/localeUA';
-
-setupCalendarLocaleUA();
 
 const Services = () => {
     const [view, setView] = useState<'menu' | 'schedule_request'>('menu');
@@ -27,11 +24,11 @@ const Services = () => {
                     onPress={() => setView('schedule_request')}
                 />
                 <MenuCard
-                    title="Службові документи"
+                    title="[placeholder]"
                     icon="archive"
                 />
                 <MenuCard
-                    title="Розрахунковий лист"
+                    title="[placeholder]"
                     icon="monetization-on"
                 />
                 <MenuCard

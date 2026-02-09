@@ -1,19 +1,10 @@
 import {Text, View, Pressable, Alert, ActivityIndicator, ScrollView} from 'react-native';
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useMemo, useState, useRef} from 'react';
 import {SafeAreaView} from "react-native-safe-area-context";
 import {router, useFocusEffect} from "expo-router";
 import { API_BASE_URL } from "@/lib/config";
 import { useAuth } from "@/app/(auth)/AuthContext";
-
-type ProfileOut = {
-    email: string;
-    full_name: string | null;
-    birth_date: string | null;
-    employee_number: string | null;
-    position: string | null;
-    work_start_date: string | null;
-    department_name: string | null;
-};
+import { getMyProfile, type ProfileOut } from "@/lib/api/profile";
 
 function formatDateUA(value: string | null | undefined) {
     if (!value) return "";
@@ -54,6 +45,7 @@ export default function ProfileScreen() {
     const [profile, setProfile] = useState<ProfileOut | null>(null);
     const [loading, setLoading] = useState(false);
     const [errorText, setErrorText] = useState<string | null>(null);
+    const abortRef = useRef<AbortController | null>(null);
 
     const loadProfile = useCallback(async () => {
         if (!token) {
@@ -62,46 +54,31 @@ export default function ProfileScreen() {
             return;
         }
 
+        abortRef.current?.abort();
+        const controller = new AbortController();
+        abortRef.current = controller;
+
         setLoading(true);
         setErrorText(null);
 
         try {
-            const res = await fetch(`${API_BASE_URL}/employee/profile/me`, {
-                method: "GET",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    Accept: "application/json",
-                },
-            });
-
-            if (res.status === 401) {
-                setErrorText("Сесія завершилась. Увійди знову.");
-                setProfile(null);
-                return;
-            }
-
-            if (!res.ok) {
-                const text = await res.text().catch(() => "");
-                throw new Error(`Помилка ${res.status}. ${text}`);
-            }
-
-            const data = (await res.json()) as ProfileOut;
+            const data = await getMyProfile(API_BASE_URL, token, controller.signal);
             setProfile(data);
         } catch (e: any) {
+            if (e?.name === "AbortError") return;
             setProfile(null);
             setErrorText(e?.message ?? "Не вдалося завантажити профіль.");
         } finally {
-            setLoading(false);
+            if (abortRef.current === controller) {
+                setLoading(false);
+            }
         }
     }, [token]);
-
-    useEffect(() => {
-        loadProfile();
-    }, [loadProfile]);
 
     useFocusEffect(
         useCallback(() => {
             loadProfile();
+            return () => abortRef.current?.abort();
         }, [loadProfile])
     );
 

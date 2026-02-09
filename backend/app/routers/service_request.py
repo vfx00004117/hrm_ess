@@ -13,34 +13,39 @@ from ..db.models.profile import EmployeeProfile
 from ..db.models.department import Department
 from ..schemas import ServiceRequestCreateIn, ServiceRequestOut, ServiceRequestUpdateStatusIn
 from ..dependencies import get_current_user, require_manager
-from ..utils import log_schedule_change
+from ..logger import log_schedule_change
 
 router = APIRouter(tags=["service_requests"])
 
 def apply_request_to_schedule(db: Session, req: ServiceRequest, manager: User):
     """Прикладає схвалену заявку до розкладу."""
-    cur_date = req.start_date
-    while cur_date <= req.end_date:
-        entry = (
-            db.execute(
-                select(WorkEntry)
-                .where(WorkEntry.user_id == req.user_id)
-                .where(WorkEntry.date == cur_date)
-            )
-            .scalar_one_or_none()
-        )
-        
+    dates = [
+        req.start_date + timedelta(days=x)
+        for x in range((req.end_date - req.start_date).days + 1)
+    ]
+
+    existing = db.execute(
+        select(WorkEntry)
+        .where(WorkEntry.user_id == req.user_id)
+        .where(WorkEntry.date.in_(dates))
+    ).scalars().all()
+    by_date = {e.date: e for e in existing}
+
+    to_add = []
+    for d in dates:
+        entry = by_date.get(d)
         if not entry:
-            entry = WorkEntry(user_id=req.user_id, date=cur_date)
-            db.add(entry)
-        
+            entry = WorkEntry(user_id=req.user_id, date=d)
+            to_add.append(entry)
+
         entry.type = req.type
         entry.start_time = None
         entry.end_time = None
         entry.title = f"Approved {req.type}"
-        
-        cur_date += timedelta(days=1)
-    
+
+    if to_add:
+        db.add_all(to_add)
+
     log_schedule_change(
         author=manager,
         target_user=req.user,

@@ -8,12 +8,6 @@ type Params = {
     isManager: boolean;
     view: "me" | "dept";
     monthYM: string;
-
-    deptEmployees: DeptEmployee[];
-    setDeptEmployees: (v: DeptEmployee[]) => void;
-
-    selectedEmployeeId: number | null;
-    setSelectedEmployeeId: (v: number | null) => void;
 };
 
 export function useScheduleMonth(p: Params) {
@@ -23,15 +17,14 @@ export function useScheduleMonth(p: Params) {
         isManager,
         view,
         monthYM,
-        deptEmployees,
-        setDeptEmployees,
-        selectedEmployeeId,
-        setSelectedEmployeeId,
     } = p;
 
     const [entries, setEntries] = useState<ScheduleEntry[]>([]);
     const [loading, setLoading] = useState(false);
     const [errorText, setErrorText] = useState<string | null>(null);
+
+    const [deptEmployees, setDeptEmployees] = useState<DeptEmployee[]>([]);
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
 
     const abortRef = useRef<AbortController | null>(null);
 
@@ -47,28 +40,34 @@ export function useScheduleMonth(p: Params) {
 
         try {
             if (isManager && view === "dept") {
-                if (deptEmployees.length === 0) {
-                    const emps = await getDeptEmployees(apiBase, token, controller.signal);
-                    setDeptEmployees(emps);
-                    if (emps[0]) setSelectedEmployeeId(emps[0].user_id);
+                let currentEmployees = deptEmployees;
+                if (currentEmployees.length === 0) {
+                    currentEmployees = await getDeptEmployees(apiBase, token, controller.signal);
+                    setDeptEmployees(currentEmployees);
+                    if (currentEmployees[0]) {
+                        setSelectedEmployeeId(currentEmployees[0].user_id);
+                    }
+                }
+
+                const targetId = selectedEmployeeId || currentEmployees[0]?.user_id;
+                if (!targetId) {
+                    setEntries([]);
                     return;
                 }
 
-                if (!selectedEmployeeId) return;
-
-                setEntries(
-                    await getEmployeeSchedule(
-                        apiBase,
-                        token,
-                        selectedEmployeeId,
-                        monthYM,
-                        controller.signal
-                    )
+                const data = await getEmployeeSchedule(
+                    apiBase,
+                    token,
+                    targetId,
+                    monthYM,
+                    controller.signal
                 );
+                setEntries(data);
                 return;
             }
 
-            setEntries(await getMySchedule(apiBase, token, monthYM, controller.signal));
+            const data = await getMySchedule(apiBase, token, monthYM, controller.signal);
+            setEntries(data);
         } catch (e: any) {
             if (e?.name !== "AbortError") setErrorText(e.message);
         } finally {
@@ -95,5 +94,14 @@ export function useScheduleMonth(p: Params) {
         return m;
     }, [entries]);
 
-    return { entries, entryByDate, loading, errorText, reload: load };
+    return {
+        entries,
+        entryByDate,
+        loading,
+        errorText,
+        reload: load,
+        deptEmployees,
+        selectedEmployeeId,
+        setSelectedEmployeeId,
+    };
 }

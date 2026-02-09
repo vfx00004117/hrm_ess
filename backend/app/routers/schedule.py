@@ -15,7 +15,7 @@ from ..schemas import (
     ScheduleRangeResultOut,
     ScheduleRangeUpsertIn,
 )
-from ..utils import log_schedule_change
+from ..logger import log_schedule_change
 from ..db.models.user import User
 from ..dependencies import (
     assert_manager_can_edit_target,
@@ -41,6 +41,33 @@ def get_month_entries(db: Session, user_id: int, month: str) -> list[WorkEntry]:
         .scalars()
         .all()
     )
+
+
+def upsert_work_entry(
+        db: Session,
+        user_id: int,
+        entry_date: date,
+        payload: ScheduleDayUpsertIn,
+) -> tuple[WorkEntry, str]:
+    entry = db.execute(
+        select(WorkEntry)
+        .where(WorkEntry.user_id == user_id)
+        .where(WorkEntry.date == entry_date)
+    ).scalar_one_or_none()
+
+    if not entry:
+        entry = WorkEntry(user_id=user_id, date=entry_date)
+        db.add(entry)
+        action = "створено"
+    else:
+        action = "оновлено"
+
+    entry.type = payload.type
+    entry.start_time = payload.start_time
+    entry.end_time = payload.end_time
+    entry.title = payload.title
+
+    return entry, action
 
 
 @router.get("/schedule/me", response_model=ScheduleMonthOut)
@@ -71,27 +98,7 @@ def add_my_schedule_for_day(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db),
 ):
-    entry = (
-        db.execute(
-            select(WorkEntry)
-            .where(WorkEntry.user_id == current_user.id)
-            .where(WorkEntry.date == payload.date)
-        )
-        .scalar_one_or_none()
-    )
-
-    if not entry:
-        entry = WorkEntry(user_id=current_user.id, date=payload.date)
-        db.add(entry)
-        action = "створено"
-    else:
-        action = "оновлено"
-
-    entry.type = payload.type
-    entry.start_time = payload.start_time
-    entry.end_time = payload.end_time
-    entry.title = payload.title
-
+    entry, action = upsert_work_entry(db, current_user.id, payload.date, payload)
     db.commit()
     db.refresh(entry)
 
@@ -116,27 +123,7 @@ def add_user_schedule_for_day(
     target = get_user_by_id(db, user_id)
     assert_manager_can_edit_target(manager, target)
 
-    entry = (
-        db.execute(
-            select(WorkEntry)
-            .where(WorkEntry.user_id == target.id)
-            .where(WorkEntry.date == payload.date)
-        )
-        .scalar_one_or_none()
-    )
-
-    if not entry:
-        entry = WorkEntry(user_id=target.id, date=payload.date)
-        db.add(entry)
-        action = "створено"
-    else:
-        action = "оновлено"
-
-    entry.type = payload.type
-    entry.start_time = payload.start_time
-    entry.end_time = payload.end_time
-    entry.title = payload.title
-
+    entry, action = upsert_work_entry(db, target.id, payload.date, payload)
     db.commit()
     db.refresh(entry)
 
@@ -161,48 +148,44 @@ def add_user_schedule_for_range(
     target = get_user_by_id(db, user_id)
     assert_manager_can_edit_target(manager, target)
 
-    dates: list[date] = []
-    cur = payload.start_date
-    while cur <= payload.end_date:
-        if payload.weekdays is None or cur.weekday() in payload.weekdays:
-            dates.append(cur)
-        cur += timedelta(days=1)
+    dates = [
+        cur for cur in (payload.start_date + timedelta(days=x) for x in range((payload.end_date - payload.start_date).days + 1))
+        if payload.weekdays is None or cur.weekday() in payload.weekdays
+    ]
 
     if not dates:
         return ScheduleRangeResultOut(created=0, updated=0, skipped=0)
 
-    existing = (
-        db.execute(
-            select(WorkEntry)
-            .where(WorkEntry.user_id == target.id)
-            .where(WorkEntry.date.in_(dates))
-        )
-        .scalars()
-        .all()
-    )
+    existing = db.execute(
+        select(WorkEntry)
+        .where(WorkEntry.user_id == target.id)
+        .where(WorkEntry.date.in_(dates))
+    ).scalars().all()
     by_date = {e.date: e for e in existing}
 
     created = updated = skipped = 0
+    to_add = []
 
     for d in dates:
         entry = by_date.get(d)
 
-        if entry and not payload.overwrite:
-            skipped += 1
-            continue
-
-        if not entry:
-            entry = WorkEntry(user_id=target.id, date=d)
-            db.add(entry)
-            created += 1
-        else:
+        if entry:
+            if not payload.overwrite:
+                skipped += 1
+                continue
             updated += 1
+        else:
+            entry = WorkEntry(user_id=target.id, date=d)
+            to_add.append(entry)
+            created += 1
 
         entry.type = payload.type
         entry.start_time = payload.start_time
         entry.end_time = payload.end_time
         entry.title = payload.title
 
+    if to_add:
+        db.add_all(to_add)
     db.commit()
 
     log_schedule_change(

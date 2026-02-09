@@ -32,7 +32,7 @@ def log_schedule_change(
     )
     
     # Визначаємо шлях до файлу логів відносно кореня бекенду
-    # Оскільки ми в backend/app/utils.py, лог буде в корені бекенду
+    # Оскільки ми в backend/app/logger.py, лог буде в корені бекенду
     log_path = os.path.join(os.getcwd(), LOG_FILE)
     
     with open(log_path, "a", encoding="utf-8") as f:
