@@ -10,10 +10,12 @@ import type { DeptEmployee } from "@/lib/schedule/types";
 import { todayISO, ymFromDate } from "@/lib/schedule/utils";
 
 import { useScheduleMonth } from "@/hooks/schedule/useScheduleMonth";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { EmployeePicker } from "@/components/schedule/EmployeePicker";
 import { ScheduleCalendar } from "@/components/schedule/ScheduleCalendar";
 import { ScheduleEditModal } from "@/components/schedule/ScheduleEditModal";
 import { deleteDaySchedule, upsertDaySchedule } from "@/lib/api/schedule";
+import { ValidationError } from "@/lib/errors";
 import type { EntryType } from "@/lib/schedule/types";
 
 setupCalendarLocaleUA();
@@ -46,6 +48,8 @@ export default function ScheduleScreen() {
         monthYM,
     });
 
+    const { errorText: actionError, handleError: handleActionError, clearError: clearActionError } = useErrorHandler();
+
     const selectedEntry = entryByDate.get(selectedDate) ?? null;
 
     const handleSaveEntry = async (payload: {
@@ -54,6 +58,7 @@ export default function ScheduleScreen() {
         end_time?: string | null;
         title?: string | null;
     }) => {
+        clearActionError();
         try {
             const targetId = view === "dept" ? selectedEmployeeId : null;
             await upsertDaySchedule(
@@ -65,19 +70,19 @@ export default function ScheduleScreen() {
             setIsEditModalVisible(false);
             reload();
         } catch (e: any) {
-            Alert.alert("Помилка", e.message || "Помилка при збереженні");
+            handleActionError(e, "Помилка при збереженні");
         }
     };
 
     const handleDeleteEntry = async () => {
         if (!selectedEntry) return;
+        clearActionError();
         try {
             const isDept = view === "dept";
             const targetId = isDept ? selectedEmployeeId : null;
 
             if (isDept && !targetId) {
-                Alert.alert("Помилка", "Спочатку оберіть співробітника");
-                return;
+                throw new ValidationError("Спочатку оберіть співробітника");
             }
 
             await deleteDaySchedule(
@@ -89,7 +94,7 @@ export default function ScheduleScreen() {
             setIsEditModalVisible(false);
             reload();
         } catch (e: any) {
-            Alert.alert("Помилка", e.message || "Помилка при видаленні");
+            handleActionError(e, "Помилка при видаленні");
         }
     };
 
@@ -97,7 +102,20 @@ export default function ScheduleScreen() {
         if (!selectedEntry) return "Немає запису на цей день";
 
         const { title, type, start_time, end_time } = selectedEntry;
-        const base = title?.trim() || type;
+        
+        let base = title?.trim();
+        
+        if (!base) {
+            const translations: Record<string, string> = {
+                shift: "Зміна",
+                off: "Вихідний",
+                vacation: "Відпустка",
+                sick: "Лікарняний",
+                trip: "Відрядження",
+                other: "Інше",
+            };
+            base = translations[type] || type;
+        }
 
         if (type === "shift" || type === "trip") {
             return `${base}: ${start_time ?? "?"} – ${end_time ?? "?"}`;
@@ -174,8 +192,9 @@ export default function ScheduleScreen() {
                 {isManager ? (
                     <Pressable
                         onPress={() => {
+                            clearActionError();
                             if (view === "dept" && !selectedEmployeeId) {
-                                Alert.alert("Помилка", "Спочатку оберіть співробітника");
+                                handleActionError(new ValidationError("Спочатку оберіть співробітника"));
                                 return;
                             }
                             setIsEditModalVisible(true);
@@ -184,6 +203,15 @@ export default function ScheduleScreen() {
                     >
                         <Text className="text-[#111827]">Додати / змінити</Text>
                     </Pressable>
+                ) : null}
+
+                {actionError ? (
+                    <View className="mt-3 bg-red-500/10 border border-red-500/30 rounded-2xl p-4">
+                        <Text className="text-red-700">{actionError}</Text>
+                        <Pressable onPress={() => clearActionError()} className="mt-2 self-start">
+                            <Text className="text-red-700 font-semibold text-xs">Закрити</Text>
+                        </Pressable>
+                    </View>
                 ) : null}
             </View>
 
@@ -194,6 +222,8 @@ export default function ScheduleScreen() {
                 onDelete={handleDeleteEntry}
                 entry={selectedEntry}
                 date={selectedDate}
+                errorText={actionError}
+                clearError={clearActionError}
             />
         </SafeAreaView>
     );

@@ -5,6 +5,8 @@ import {router, useFocusEffect} from "expo-router";
 import { API_BASE_URL } from "@/lib/config";
 import { useAuth } from "@/app/(auth)/AuthContext";
 import { getMyProfile, type ProfileOut } from "@/lib/api/profile";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
+import { AuthError } from "@/lib/errors";
 
 function formatDateUA(value: string | null | undefined) {
     if (!value) return "";
@@ -44,13 +46,13 @@ export default function ProfileScreen() {
 
     const [profile, setProfile] = useState<ProfileOut | null>(null);
     const [loading, setLoading] = useState(false);
-    const [errorText, setErrorText] = useState<string | null>(null);
+    const { errorText, handleError, clearError } = useErrorHandler();
     const abortRef = useRef<AbortController | null>(null);
 
     const loadProfile = useCallback(async () => {
         if (!token) {
             setProfile(null);
-            setErrorText("Немає токена авторизації. Увійди знову.");
+            handleError(new AuthError("Немає токена авторизації. Увійдіть знову."));
             return;
         }
 
@@ -59,21 +61,19 @@ export default function ProfileScreen() {
         abortRef.current = controller;
 
         setLoading(true);
-        setErrorText(null);
+        clearError();
 
         try {
             const data = await getMyProfile(API_BASE_URL, token, controller.signal);
             setProfile(data);
         } catch (e: any) {
-            if (e?.name === "AbortError") return;
-            setProfile(null);
-            setErrorText(e?.message ?? "Не вдалося завантажити профіль.");
+            handleError(e, "Не вдалося завантажити профіль.");
         } finally {
             if (abortRef.current === controller) {
                 setLoading(false);
             }
         }
-    }, [token]);
+    }, [token, handleError, clearError]);
 
     useFocusEffect(
         useCallback(() => {

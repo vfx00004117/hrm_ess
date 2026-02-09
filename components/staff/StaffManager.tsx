@@ -15,17 +15,10 @@ import { API_BASE_URL } from "@/lib/config";
 import { useAuth } from "@/app/(auth)/AuthContext";
 import { EmployeePicker } from "@/components/schedule/EmployeePicker";
 import type { DeptEmployee } from "@/lib/schedule/types";
-import { getDeptEmployees, fetchJson, handleResponseError } from "@/lib/api/schedule";
+import { getDeptEmployees } from "@/lib/api/schedule";
+import { getEmployeeProfile, updateEmployeeProfile, type ProfileOut } from "@/lib/api/profile";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
 
-type ProfileData = {
-    email: string;
-    full_name: string | null;
-    birth_date: string | null;
-    employee_number: string | null;
-    position: string | null;
-    work_start_date: string | null;
-    department_name: string | null;
-};
 
 type Props = {
     onBack: () => void;
@@ -35,10 +28,11 @@ export default function StaffManager({ onBack }: Props) {
     const { token } = useAuth();
     const [employees, setEmployees] = useState<DeptEmployee[]>([]);
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
-    const [profile, setProfile] = useState<ProfileData | null>(null);
+    const [profile, setProfile] = useState<ProfileOut | null>(null);
     const [loadingEmployees, setLoadingEmployees] = useState(false);
     const [loadingProfile, setLoadingProfile] = useState(false);
     const [saving, setSaving] = useState(false);
+    const { errorText, handleError, clearError } = useErrorHandler();
 
     // Поля форми
     const [fullName, setFullName] = useState("");
@@ -50,15 +44,16 @@ export default function StaffManager({ onBack }: Props) {
     const loadEmployees = useCallback(async () => {
         if (!token) return;
         setLoadingEmployees(true);
+        clearError();
         try {
             const data = await getDeptEmployees(API_BASE_URL, token);
             setEmployees(data);
         } catch (e: any) {
-            Alert.alert("Помилка", "Не вдалося завантажити список співробітників");
+            handleError(e, "Не вдалося завантажити список співробітників");
         } finally {
             setLoadingEmployees(false);
         }
-    }, [token]);
+    }, [token, handleError, clearError]);
 
     useEffect(() => {
         loadEmployees();
@@ -67,11 +62,9 @@ export default function StaffManager({ onBack }: Props) {
     const loadEmployeeProfile = useCallback(async (id: number) => {
         if (!token) return;
         setLoadingProfile(true);
+        clearError();
         try {
-            const data = await fetchJson<ProfileData>(
-                `${API_BASE_URL}/employee/profile/${id}`,
-                token
-            );
+            const data = await getEmployeeProfile(API_BASE_URL, token, id);
             setProfile(data);
             setFullName(data.full_name || "");
             setEmpNo(data.employee_number || "");
@@ -79,11 +72,11 @@ export default function StaffManager({ onBack }: Props) {
             setBirthDate(data.birth_date || "");
             setWorkStart(data.work_start_date || "");
         } catch (e: any) {
-            Alert.alert("Помилка", e.message || "Не вдалося завантажити профіль");
+            handleError(e, "Не вдалося завантажити профіль");
         } finally {
             setLoadingProfile(false);
         }
-    }, [token]);
+    }, [token, handleError, clearError]);
 
     useEffect(() => {
         if (selectedEmployeeId) {
@@ -96,34 +89,21 @@ export default function StaffManager({ onBack }: Props) {
     const handleSave = async () => {
         if (!token || !selectedEmployeeId) return;
         setSaving(true);
+        clearError();
         try {
-            const payload = {
+            await updateEmployeeProfile(API_BASE_URL, token, selectedEmployeeId, {
                 full_name: fullName,
                 employee_number: empNo,
                 position: position,
                 birth_date: birthDate || null,
                 work_start_date: workStart || null,
-            };
-
-            const res = await fetch(`${API_BASE_URL}/employee/profile/add/${selectedEmployeeId}`, {
-                method: "PUT",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                    Accept: "application/json",
-                },
-                body: JSON.stringify(payload),
             });
-
-            if (!res.ok) {
-                await handleResponseError(res);
-            }
 
             Alert.alert("Успіх", "Профіль співробітника оновлено");
             // Оновлюємо список співробітників, якщо ПІБ змінилося
             loadEmployees();
         } catch (e: any) {
-            Alert.alert("Помилка", e.message);
+            handleError(e);
         } finally {
             setSaving(false);
         }
@@ -235,6 +215,15 @@ export default function StaffManager({ onBack }: Props) {
                         <Text className="text-slate-400">Оберіть співробітника для редагування</Text>
                     </View>
                 )}
+
+                {errorText ? (
+                    <View className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mt-4">
+                        <Text className="text-red-700">{errorText}</Text>
+                        <TouchableOpacity onPress={clearError} className="mt-3 bg-black/10 px-4 py-3 rounded-xl self-start">
+                            <Text className="text-[#111827]">Закрити</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : null}
             </ScrollView>
         </SafeAreaView>
     );

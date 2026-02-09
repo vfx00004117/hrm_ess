@@ -3,6 +3,8 @@ import { View, Text, TextInput, Pressable, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { API_BASE_URL } from "@/lib/config";
 import { useAuth } from "./AuthContext";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
+import { login } from "@/lib/api/auth";
 
 export default function LoginScreen() {
     const router = useRouter();
@@ -11,23 +13,18 @@ export default function LoginScreen() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const { errorText, handleError, clearError } = useErrorHandler();
 
     async function onLogin() {
         setLoading(true);
+        clearError();
         try {
-            const res = await fetch(`${API_BASE_URL}/auth/login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
-            });
-
-            if (!res.ok) throw new Error("Invalid credentials");
-            const data = await res.json();
+            const data = await login(API_BASE_URL, { email, password });
             await signIn(data.accessToken);
 
             router.replace("/(tabs)");
         } catch (e: any) {
-            Alert.alert("Login failed", e?.message ?? "Unknown error");
+            handleError(e);
         } finally {
             setLoading(false);
         }
@@ -61,6 +58,12 @@ export default function LoginScreen() {
             >
                 <Text className="text-white font-semibold">{loading ? "..." : "Login"}</Text>
             </Pressable>
+
+            {errorText ? (
+                <View className="bg-red-500/10 border border-red-500/30 rounded-xl p-3">
+                    <Text className="text-red-700 text-center">{errorText}</Text>
+                </View>
+            ) : null}
         </View>
     );
 }

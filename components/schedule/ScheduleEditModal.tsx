@@ -8,11 +8,11 @@ import {
     View,
     KeyboardAvoidingView,
     Platform,
-    Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { EntryType, ScheduleEntry } from "@/lib/schedule/types";
-import {MaterialIcons} from "@expo/vector-icons";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
+import { ValidationError } from "@/lib/errors";
 
 type Props = {
     visible: boolean;
@@ -22,10 +22,12 @@ type Props = {
         start_time?: string | null;
         end_time?: string | null;
         title?: string | null;
-    }) => void;
-    onDelete: () => void;
+    }) => Promise<void>;
+    onDelete: () => Promise<void>;
     entry: ScheduleEntry | null;
     date: string;
+    errorText?: string | null;
+    clearError?: () => void;
 };
 
 const TYPES: { label: string; value: EntryType }[] = [
@@ -44,14 +46,20 @@ export function ScheduleEditModal({
     onDelete,
     entry,
     date,
+    errorText: externalError,
+    clearError: clearExternalError,
 }: Props) {
     const [type, setType] = useState<EntryType>("shift");
     const [startTime, setStartTime] = useState("");
     const [endTime, setEndTime] = useState("");
     const [title, setTitle] = useState("");
+    const { errorText: localError, handleError, clearError: clearLocalError } = useErrorHandler();
+
+    const errorText = externalError || localError;
 
     useEffect(() => {
         if (visible) {
+            clearLocalError();
             if (entry) {
                 setType(entry.type);
                 setStartTime(entry.start_time?.substring(0, 5) || "");
@@ -66,21 +74,30 @@ export function ScheduleEditModal({
         }
     }, [visible, entry]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
+        clearLocalError();
+        clearExternalError?.();
+        
         if (type === "shift") {
             if (!startTime.trim() || !endTime.trim()) {
-                Alert.alert("Помилка", "Для зміни необхідно вказати час початку та кінця");
+                handleError(new ValidationError("Для зміни необхідно вказати час початку та кінця"));
                 return;
             }
         }
 
         const needsTime = type === "shift" || type === "trip";
-        onSave({
+        await onSave({
             type,
             start_time: needsTime ? startTime.trim() : null,
             end_time: needsTime ? endTime.trim() : null,
             title: title.trim() || null,
         });
+    };
+
+    const handleDelete = async () => {
+        clearLocalError();
+        clearExternalError?.();
+        await onDelete();
     };
 
     return (
@@ -160,12 +177,18 @@ export function ScheduleEditModal({
                                     )}
 
                                     <View className="mt-4 gap-3">
+                                        {errorText ? (
+                                            <View className="mb-2 bg-red-500/10 border border-red-500/30 rounded-xl p-3">
+                                                <Text className="text-red-700 text-sm">{errorText}</Text>
+                                            </View>
+                                        ) : null}
+
                                         <Pressable onPress={handleSave} className="bg-emerald-600/90 py-4 rounded-2xl items-center border border-emerald-700/60">
                                             <Text className="text-white font-bold text-lg">Зберегти</Text>
                                         </Pressable>
 
                                         {entry && (
-                                            <Pressable onPress={onDelete} className="bg-red-500/30 py-4 rounded-2xl items-center border border-red-500/20">
+                                            <Pressable onPress={handleDelete} className="bg-red-500/30 py-4 rounded-2xl items-center border border-red-500/20">
                                                 <Text className="text-red-600 font-bold text-lg">Видалити</Text>
                                             </Pressable>
                                         )}

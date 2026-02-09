@@ -10,3 +10,7 @@
 [2026-02-07 03:49:13] Автор: manager1@test.com (ID: 9) | Користувач: manager1@test.com (ID: 9) | Дата: 2026-04-01 - 2026-04-02 | Зміна: заявка схвалена | Деталі: Тип: vacation
 [2026-02-07 04:05:39] Автор: dkolosovskyi@company.ua (ID: 1) | Користувач: dkolosovskyi@company.ua (ID: 1) | Дата: 2026-05-01 - 2026-05-01 | Зміна: заявка схвалена | Деталі: Тип: off
 [2026-02-08 02:13:25] Автор: dkolosovskyi@company.ua (ID: 1) | Користувач: vkarpenko@company.ua (ID: 2) | Дата: 2026-02-08 | Зміна: створено | Деталі: Тип: other, Час: None-None, Заголовок: Відсторонений
+[2026-02-09 03:06:09] Автор: dkolosovskyi@company.ua (ID: 1) | Співробітник: dkolosovskyi@company.ua (ID: 1) | Дата: 2026-02-09 | Дія: створено | Деталі: Тип: off, Час: None-None, Заголовок: None
+[2026-02-09 03:06:15] Автор: dkolosovskyi@company.ua (ID: 1) | Співробітник: dkolosovskyi@company.ua (ID: 1) | Дата: 2026-02-10 | Дія: створено | Деталі: Тип: other, Час: None-None, Заголовок: None
+[2026-02-09 03:06:18] Автор: dkolosovskyi@company.ua (ID: 1) | Співробітник: dkolosovskyi@company.ua (ID: 1) | Дата: 2026-02-08 | Дія: створено | Деталі: Тип: vacation, Час: None-None, Заголовок: None
+[2026-02-09 03:11:04] Автор: dkolosovskyi@company.ua (ID: 1) | Співробітник: dkolosovskyi@company.ua (ID: 1) | Дата: 2026-04-14 - 2026-04-16 | Дія: заявка схвалена | Деталі: Тип: off

@@ -32,6 +32,12 @@ def apply_request_to_schedule(db: Session, req: ServiceRequest, manager: User):
     by_date = {e.date: e for e in existing}
 
     to_add = []
+    translations = {
+        "off": "Вихідний",
+        "vacation": "Відпустка",
+        "sick": "Лікарняний"
+    }
+    
     for d in dates:
         entry = by_date.get(d)
         if not entry:
@@ -41,7 +47,9 @@ def apply_request_to_schedule(db: Session, req: ServiceRequest, manager: User):
         entry.type = req.type
         entry.start_time = None
         entry.end_time = None
-        entry.title = f"Approved {req.type}"
+        
+        type_ua = translations.get(req.type, req.type)
+        entry.title = f"Схвалено: {type_ua}"
 
     if to_add:
         db.add_all(to_add)

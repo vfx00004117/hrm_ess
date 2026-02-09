@@ -65,7 +65,20 @@ def upsert_work_entry(
     entry.type = payload.type
     entry.start_time = payload.start_time
     entry.end_time = payload.end_time
-    entry.title = payload.title
+    
+    # Якщо заголовок не вказано, підставляємо українську назву типу
+    if not payload.title:
+        translations = {
+            "shift": "Зміна",
+            "off": "Вихідний",
+            "vacation": "Відпустка",
+            "sick": "Лікарняний",
+            "trip": "Відрядження",
+            "other": "Інше"
+        }
+        entry.title = translations.get(payload.type, payload.type)
+    else:
+        entry.title = payload.title
 
     return entry, action
 
@@ -182,7 +195,20 @@ def add_user_schedule_for_range(
         entry.type = payload.type
         entry.start_time = payload.start_time
         entry.end_time = payload.end_time
-        entry.title = payload.title
+        
+        # Якщо заголовок не вказано, підставляємо українську назву типу
+        if not payload.title:
+            translations = {
+                "shift": "Зміна",
+                "off": "Вихідний",
+                "vacation": "Відпустка",
+                "sick": "Лікарняний",
+                "trip": "Відрядження",
+                "other": "Інше"
+            }
+            entry.title = translations.get(payload.type, payload.type)
+        else:
+            entry.title = payload.title
 
     if to_add:
         db.add_all(to_add)

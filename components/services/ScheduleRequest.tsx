@@ -13,6 +13,8 @@ import { useAuth } from '@/app/(auth)/AuthContext';
 import { API_BASE_URL } from '@/lib/config';
 import { createServiceRequest } from '@/lib/api/services';
 import { getMySchedule } from '@/lib/api/schedule';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { ValidationError } from '@/lib/errors';
 import { bgForEntry, pad2, todayISO, ymFromDate } from '@/lib/schedule/utils';
 import { ScheduleEntry } from '@/lib/schedule/types';
 import {SafeAreaView} from "react-native-safe-area-context";
@@ -27,6 +29,7 @@ const ScheduleRequest: React.FC<ScheduleRequestProps> = ({ onBack }) => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [loading, setLoading] = useState(false);
+    const { errorText, handleError, clearError } = useErrorHandler();
     const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
     const [currentMonth, setCurrentMonth] = useState(ymFromDate(todayISO()));
 
@@ -37,11 +40,12 @@ const ScheduleRequest: React.FC<ScheduleRequestProps> = ({ onBack }) => {
     }, [currentMonth, token]);
 
     const fetchSchedule = async (month: string) => {
+        clearError();
         try {
             const entries = await getMySchedule(API_BASE_URL, token!, month);
             setScheduleEntries(entries);
         } catch (e) {
-            console.error("Error fetching schedule:", e);
+            handleError(e);
         }
     };
 
@@ -90,13 +94,14 @@ const ScheduleRequest: React.FC<ScheduleRequestProps> = ({ onBack }) => {
     }, [scheduleEntries, startDate, endDate]);
 
     const handleSubmit = async () => {
+        clearError();
         if (!startDate || !endDate) {
-            Alert.alert("Помилка", "Будь ласка, оберіть період");
+            handleError(new ValidationError("Будь ласка, оберіть період"));
             return;
         }
 
         if (new Date(startDate) > new Date(endDate)) {
-            Alert.alert("Помилка", "Дата початку не може бути пізніше дати закінчення");
+            handleError(new ValidationError("Дата початку не може бути пізніше дати закінчення"));
             return;
         }
 
@@ -110,7 +115,7 @@ const ScheduleRequest: React.FC<ScheduleRequestProps> = ({ onBack }) => {
             Alert.alert("Успіх", "Заявку успішно створено");
             onBack();
         } catch (e: any) {
-            Alert.alert("Помилка", e.message);
+            handleError(e, "Помилка при створенні заявки");
         } finally {
             setLoading(false);
         }
@@ -198,6 +203,15 @@ const ScheduleRequest: React.FC<ScheduleRequestProps> = ({ onBack }) => {
                         <Text className="text-white text-[16px] font-bold">Зберегти заявку</Text>
                     )}
                 </TouchableOpacity>
+
+                {errorText ? (
+                    <View className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mt-4">
+                        <Text className="text-red-700">{errorText}</Text>
+                        <TouchableOpacity onPress={clearError} className="mt-3 bg-black/10 px-4 py-3 rounded-xl self-start">
+                            <Text className="text-[#111827]">Закрити</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : null}
             </View>
         </SafeAreaView>
     );

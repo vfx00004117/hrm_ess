@@ -13,6 +13,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '@/app/(auth)/AuthContext';
 import { API_BASE_URL } from '@/lib/config';
 import { getAllServiceRequests, updateServiceRequestStatus, ServiceRequest } from '@/lib/api/services';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface StaffRequestsProps {
     onBack: () => void;
@@ -23,13 +24,15 @@ export default function StaffRequests({ onBack }: StaffRequestsProps) {
     const [requests, setRequests] = useState<ServiceRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const { errorText, handleError, clearError } = useErrorHandler();
 
     const fetchRequests = async () => {
+        clearError();
         try {
             const data = await getAllServiceRequests(API_BASE_URL, token!);
             setRequests(data);
         } catch (e: any) {
-            Alert.alert("Помилка", e.message);
+            handleError(e, "Не вдалося завантажити заявки");
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -46,12 +49,13 @@ export default function StaffRequests({ onBack }: StaffRequestsProps) {
     };
 
     const handleAction = async (requestId: number, status: 'approved' | 'rejected') => {
+        clearError();
         try {
             await updateServiceRequestStatus(API_BASE_URL, token!, requestId, status);
             Alert.alert("Успіх", `Заявку ${status === 'approved' ? 'схвалено' : 'відхилено'}`);
             fetchRequests();
         } catch (e: any) {
-            Alert.alert("Помилка", e.message);
+            handleError(e);
         }
     };
 
@@ -132,6 +136,15 @@ export default function StaffRequests({ onBack }: StaffRequestsProps) {
                 }
                 contentContainerClassName="pb-5"
             />
+
+            {errorText ? (
+                <View className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mb-4">
+                    <Text className="text-red-700">{errorText}</Text>
+                    <TouchableOpacity onPress={clearError} className="mt-3 bg-black/10 px-4 py-3 rounded-xl self-start">
+                        <Text className="text-[#111827]">Закрити</Text>
+                    </TouchableOpacity>
+                </View>
+            ) : null}
         </SafeAreaView>
     );
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getDeptEmployees, getEmployeeSchedule, getMySchedule } from "@/lib/api/schedule";
 import type { DeptEmployee, ScheduleEntry } from "@/lib/schedule/types";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
 
 type Params = {
     apiBase: string;
@@ -21,7 +22,7 @@ export function useScheduleMonth(p: Params) {
 
     const [entries, setEntries] = useState<ScheduleEntry[]>([]);
     const [loading, setLoading] = useState(false);
-    const [errorText, setErrorText] = useState<string | null>(null);
+    const { errorText, handleError, clearError } = useErrorHandler();
 
     const [deptEmployees, setDeptEmployees] = useState<DeptEmployee[]>([]);
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
@@ -36,7 +37,7 @@ export function useScheduleMonth(p: Params) {
         abortRef.current = controller;
 
         setLoading(true);
-        setErrorText(null);
+        clearError();
 
         try {
             if (isManager && view === "dept") {
@@ -69,9 +70,11 @@ export function useScheduleMonth(p: Params) {
             const data = await getMySchedule(apiBase, token, monthYM, controller.signal);
             setEntries(data);
         } catch (e: any) {
-            if (e?.name !== "AbortError") setErrorText(e.message);
+            handleError(e);
         } finally {
-            setLoading(false);
+            if (abortRef.current === controller) {
+                setLoading(false);
+            }
         }
     }, [
         apiBase,
@@ -81,6 +84,8 @@ export function useScheduleMonth(p: Params) {
         monthYM,
         deptEmployees.length,
         selectedEmployeeId,
+        handleError,
+        clearError,
     ]);
 
     useEffect(() => {
