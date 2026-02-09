@@ -26,30 +26,32 @@ export default function StaffScreen() {
     }
 
     return (
-        <SafeAreaView className="flex-1 bg-[#f5f5f5] px-4" edges={['top']}>
-            <Text className="text-3xl font-bold mb-3">Персонал</Text>
-            <View className="flex-row flex-wrap justify-between">
-                <MenuCard
-                    title="Заявки"
-                    icon="assignment"
-                    onPress={() => setView('requests')}
-                />
+        <SafeAreaView className="flex-1 bg-[#f5f5f5]" edges={['top']}>
+            <View className="flex-1 web:max-w-2xl web:mx-auto w-full px-4">
+                <Text className="text-3xl font-bold mb-3">Персонал</Text>
+                <View className="flex-row flex-wrap justify-between">
+                    <MenuCard
+                        title="Заявки"
+                        icon="assignment"
+                        onPress={() => setView('requests')}
+                    />
 
-                <MenuCard
-                    title="Співробітники"
-                    icon="people"
-                    onPress={() => setView('employees')}
-                />
+                    <MenuCard
+                        title="Співробітники"
+                        icon="people"
+                        onPress={() => setView('employees')}
+                    />
 
-                <MenuCard
-                    title="[placeholder]"
-                    icon="bar-chart"
-                />
+                    <MenuCard
+                        title="[placeholder]"
+                        icon="bar-chart"
+                    />
 
-                <MenuCard
-                    title="[placeholder]"
-                    icon="settings"
-                />
+                    <MenuCard
+                        title="[placeholder]"
+                        icon="settings"
+                    />
+                </View>
             </View>
         </SafeAreaView>
     );

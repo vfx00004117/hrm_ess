@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { Calendar, DateData } from "react-native-calendars";
 import type { ScheduleEntry } from "@/lib/schedule/types";
-import { bgForEntry, pad2, firstOfMonth } from "@/lib/schedule/utils";
+import { bgForEntry, pad2, firstOfMonth, getAdjacentDate } from "@/lib/schedule/utils";
 
 type Props = {
     monthYM: string;
@@ -20,11 +20,26 @@ export function ScheduleCalendar({
                                  }: Props) {
     const markedDates = useMemo(() => {
         const marks: Record<string, any> = {};
+        const entryMap = new Map(entries.map((e) => [e.date, e]));
 
         for (const e of entries) {
+            const prevDate = getAdjacentDate(e.date, -1);
+            const nextDate = getAdjacentDate(e.date, 1);
+
+            const isPrevSame = entryMap.get(prevDate)?.type === e.type;
+            const isNextSame = entryMap.get(nextDate)?.type === e.type;
+
             marks[e.date] = {
                 customStyles: {
-                    container: { backgroundColor: bgForEntry(e), borderRadius: 10 },
+                    container: {
+                        backgroundColor: bgForEntry(e),
+                        borderRadius: 15,
+                        borderTopLeftRadius: isPrevSame ? 0 : 15,
+                        borderBottomLeftRadius: isPrevSame ? 0 : 15,
+                        borderTopRightRadius: isNextSame ? 0 : 15,
+                        borderBottomRightRadius: isNextSame ? 0 : 15,
+                        width: "100%",
+                    },
                     text: { color: "#111827", fontWeight: "600" },
                 },
             };
@@ -35,10 +50,9 @@ export function ScheduleCalendar({
             ...prev,
             customStyles: {
                 container: {
-                    ...(prev.customStyles?.container ?? {}),
+                    ...(prev.customStyles?.container ?? { borderRadius: 15 }),
                     borderWidth: 2,
                     borderColor: "#111827",
-                    borderRadius: 10,
                 },
                 text: { ...(prev.customStyles?.text ?? {}), color: "#111827", fontWeight: "700" },
             },
@@ -54,6 +68,7 @@ export function ScheduleCalendar({
             markedDates={markedDates}
             onDayPress={(day: DateData) => onSelectDate(day.dateString)}
             onMonthChange={(m) => onChangeMonthYM(`${m.year}-${pad2(m.month)}`)}
+            firstDay={1}
             theme={{
                 calendarBackground: "#FFFFFF",
                 monthTextColor: "#111827",

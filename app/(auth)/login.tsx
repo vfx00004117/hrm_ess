@@ -31,39 +31,41 @@ export default function LoginScreen() {
     }
 
     return (
-        <View className="flex-1 justify-center px-6 gap-4 bg-white">
-            <Text className="text-2xl font-bold">Sign in</Text>
+        <View className="flex-1 bg-white">
+            <View className="flex-1 justify-center px-6 gap-4 web:max-w-md web:mx-auto w-full">
+                <Text className="text-2xl font-bold">Sign in</Text>
 
-            <TextInput
-                className="border rounded-xl px-4 py-3"
-                placeholder="Email"
-                placeholderTextColor="gray"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-            />
-            <TextInput
-                className="border rounded-xl px-4 py-3"
-                placeholder="Password"
-                placeholderTextColor="gray"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-            />
+                <TextInput
+                    className="border rounded-xl px-4 py-3"
+                    placeholder="Email"
+                    placeholderTextColor="gray"
+                    autoCapitalize="none"
+                    value={email}
+                    onChangeText={setEmail}
+                />
+                <TextInput
+                    className="border rounded-xl px-4 py-3"
+                    placeholder="Password"
+                    placeholderTextColor="gray"
+                    secureTextEntry
+                    value={password}
+                    onChangeText={setPassword}
+                />
 
-            <Pressable
-                className="bg-black rounded-xl py-3 items-center"
-                onPress={onLogin}
-                disabled={loading}
-            >
-                <Text className="text-white font-semibold">{loading ? "..." : "Login"}</Text>
-            </Pressable>
+                <Pressable
+                    className="bg-black rounded-xl py-3 items-center"
+                    onPress={onLogin}
+                    disabled={loading}
+                >
+                    <Text className="text-white font-semibold">{loading ? "..." : "Login"}</Text>
+                </Pressable>
 
-            {errorText ? (
-                <View className="bg-red-500/10 border border-red-500/30 rounded-xl p-3">
-                    <Text className="text-red-700 text-center">{errorText}</Text>
-                </View>
-            ) : null}
+                {errorText ? (
+                    <View className="bg-red-500/10 border border-red-500/30 rounded-xl p-3">
+                        <Text className="text-red-700 text-center">{errorText}</Text>
+                    </View>
+                ) : null}
+            </View>
         </View>
     );
 }

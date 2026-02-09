@@ -15,13 +15,16 @@ import { createServiceRequest } from '@/lib/api/services';
 import { getMySchedule } from '@/lib/api/schedule';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
 import { ValidationError } from '@/lib/errors';
-import { bgForEntry, pad2, todayISO, ymFromDate } from '@/lib/schedule/utils';
+import { setupCalendarLocaleUA } from '@/lib/calendar/localeUA';
+import { bgForEntry, pad2, todayISO, ymFromDate, getAdjacentDate } from '@/lib/schedule/utils';
 import { ScheduleEntry } from '@/lib/schedule/types';
 import {SafeAreaView} from "react-native-safe-area-context";
 
 interface ScheduleRequestProps {
     onBack: () => void;
 }
+
+setupCalendarLocaleUA();
 
 const ScheduleRequest: React.FC<ScheduleRequestProps> = ({ onBack }) => {
     const { token } = useAuth();
@@ -51,12 +54,27 @@ const ScheduleRequest: React.FC<ScheduleRequestProps> = ({ onBack }) => {
 
     const markedDates = useMemo(() => {
         const marks: any = {};
+        const entryMap = new Map(scheduleEntries.map((e) => [e.date, e]));
 
         // 1. Поточний графік
         scheduleEntries.forEach(entry => {
+            const prevDate = getAdjacentDate(entry.date, -1);
+            const nextDate = getAdjacentDate(entry.date, 1);
+
+            const isPrevSame = entryMap.get(prevDate)?.type === entry.type;
+            const isNextSame = entryMap.get(nextDate)?.type === entry.type;
+
             marks[entry.date] = {
                 customStyles: {
-                    container: { backgroundColor: bgForEntry(entry), borderRadius: 10 },
+                    container: {
+                        backgroundColor: bgForEntry(entry),
+                        borderRadius: 15,
+                        borderTopLeftRadius: isPrevSame ? 0 : 15,
+                        borderBottomLeftRadius: isPrevSame ? 0 : 15,
+                        borderTopRightRadius: isNextSame ? 0 : 15,
+                        borderBottomRightRadius: isNextSame ? 0 : 15,
+                        width: "100%",
+                    },
                     text: { color: "#111827", fontWeight: "600" },
                 },
             };
@@ -67,18 +85,26 @@ const ScheduleRequest: React.FC<ScheduleRequestProps> = ({ onBack }) => {
             const periodDates = !endDate ? [startDate] : getPeriodArray(startDate, endDate);
             
             periodDates.forEach(date => {
-                const isEdge = date === startDate || date === endDate;
+                const isStart = date === startDate;
+                const isEnd = date === endDate;
+                const isEdge = isStart || isEnd;
                 const prev = marks[date] ?? {};
                 
+                const prevC = prev.customStyles?.container ?? {};
                 marks[date] = {
                     ...prev,
                     customStyles: {
                         container: {
-                            ...(prev.customStyles?.container ?? {}),
+                            ...prevC,
                             backgroundColor: isEdge ? '#2196F3' : '#E3F2FD',
                             borderWidth: isEdge ? 0 : 1,
                             borderColor: '#2196F3',
-                            borderRadius: 10,
+                            borderRadius: 15,
+                            borderTopLeftRadius: (endDate && !isStart) || prevC.borderTopLeftRadius === 0 ? 0 : 15,
+                            borderBottomLeftRadius: (endDate && !isStart) || prevC.borderBottomLeftRadius === 0 ? 0 : 15,
+                            borderTopRightRadius: (endDate && !isEnd) || prevC.borderTopRightRadius === 0 ? 0 : 15,
+                            borderBottomRightRadius: (endDate && !isEnd) || prevC.borderBottomRightRadius === 0 ? 0 : 15,
+                            width: "100%",
                         },
                         text: {
                             ...(prev.customStyles?.text ?? {}),
@@ -122,96 +148,101 @@ const ScheduleRequest: React.FC<ScheduleRequestProps> = ({ onBack }) => {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-[#f5f5f5] px-5 pt-3" edges={['top']}>
-            <View className="flex-row items-center mb-[20px]">
-                <TouchableOpacity onPress={onBack} className="mr-[15px]">
-                    <MaterialIcons name="arrow-back" size={24} color="black" />
-                </TouchableOpacity>
-                <Text className="text-[20px] font-bold">Заявка на зміну графіку</Text>
-            </View>
-            <View className="pb-10">
-                <View className="bg-white rounded-[15px] p-[15px] mb-5">
-                    <Text className="text-[16px] font-semibold mb-[10px]">Тип заявки:</Text>
-                    <View className="flex-row justify-between">
-                        {(['off', 'vacation', 'sick'] as const).map((type) => (
-                            <TouchableOpacity
-                                key={type}
-                                className={`flex-1 py-[10px] items-center rounded-[10px] border border-[#ddd] mx-[5px] ${
-                                    requestType === type ? 'bg-[#2196F3] border-[#2196F3]' : ''
-                                }`}
-                                onPress={() => setRequestType(type)}
-                            >
-                                <Text className={`text-[12px] ${
-                                    requestType === type ? 'text-white font-bold' : 'text-[#666]'
-                                }`}>
-                                    {type === 'off' ? 'Вихідний' : type === 'vacation' ? 'Відпустка' : 'Лікарняний'}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
+        <SafeAreaView className="flex-1 bg-[#f5f5f5]" edges={['top']}>
+            <View className="flex-1 web:max-w-2xl web:mx-auto w-full px-5 pt-3">
+                <View className="flex-row items-center mb-[20px]">
+                    <TouchableOpacity onPress={onBack} className="mr-[15px]">
+                        <MaterialIcons name="arrow-back" size={24} color="black" />
+                    </TouchableOpacity>
+                    <Text className="text-[20px] font-bold">Заявка на зміну графіку</Text>
                 </View>
-
-                <View className="bg-white border border-black/10 rounded-2xl p-3 mb-5">
-                    <Text className="text-[16px] font-semibold mb-[10px] px-2">Оберіть період:</Text>
-                    <Calendar
-                        onDayPress={(day) => {
-                            if (!startDate || (startDate && endDate)) {
-                                setStartDate(day.dateString);
-                                setEndDate('');
-                            } else {
-                                if (day.dateString < startDate) {
-                                    setStartDate(day.dateString);
-                                    setEndDate('');
-                                } else {
-                                    setEndDate(day.dateString);
-                                }
-                            }
-                        }}
-                        onMonthChange={(month) => {
-                            setCurrentMonth(`${month.year}-${pad2(month.month)}`);
-                        }}
-                        markedDates={markedDates}
-                        markingType={'custom'}
-                        theme={{
-                            calendarBackground: "#FFFFFF",
-                            monthTextColor: "#111827",
-                            dayTextColor: "#111827",
-                            textDisabledColor: "rgba(17,24,39,0.35)",
-                            arrowColor: "#111827",
-                            todayTextColor: "#111827",
-                            textSectionTitleColor: "rgba(17,24,39,0.55)",
-                        }}
-                    />
-                    {(startDate || endDate) && (
-                        <View className="mt-[15px] pt-[15px] border-t border-[#eee] px-2">
-                            <Text className="text-black/70">Початок: <Text className="font-semibold text-[#111827]">{startDate || '-'}</Text></Text>
-                            <Text className="text-black/70">Кінець: <Text className="font-semibold text-[#111827]">{endDate || '-'}</Text></Text>
+                <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+                    <View className="pb-10">
+                        <View className="bg-white rounded-[15px] p-[15px] mb-5">
+                            <Text className="text-[16px] font-semibold mb-[10px]">Тип заявки:</Text>
+                            <View className="flex-row justify-between">
+                                {(['off', 'vacation', 'sick'] as const).map((type) => (
+                                    <TouchableOpacity
+                                        key={type}
+                                        className={`flex-1 py-[10px] items-center rounded-[10px] border border-[#ddd] mx-[5px] ${
+                                            requestType === type ? 'bg-[#2196F3] border-[#2196F3]' : ''
+                                        }`}
+                                        onPress={() => setRequestType(type)}
+                                    >
+                                        <Text className={`text-[12px] ${
+                                            requestType === type ? 'text-white font-bold' : 'text-[#666]'
+                                        }`}>
+                                            {type === 'off' ? 'Вихідний' : type === 'vacation' ? 'Відпустка' : 'Лікарняний'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
                         </View>
-                    )}
-                </View>
 
-                <TouchableOpacity
-                    className={`bg-emerald-600/90 border border-emerald-700/60 py-4 rounded-2xl items-center mt-2 ${
-                        loading ? 'bg-emerald-300' : ''
-                    }`}
-                    onPress={handleSubmit}
-                    disabled={loading}
-                >
-                    {loading ? (
-                        <ActivityIndicator color="white" />
-                    ) : (
-                        <Text className="text-white text-[16px] font-bold">Зберегти заявку</Text>
-                    )}
-                </TouchableOpacity>
+                        <View className="bg-white border border-black/10 rounded-2xl p-3 mb-5">
+                            <Text className="text-[16px] font-semibold mb-[10px] px-2">Оберіть період:</Text>
+                            <Calendar
+                                onDayPress={(day) => {
+                                    if (!startDate || (startDate && endDate)) {
+                                        setStartDate(day.dateString);
+                                        setEndDate('');
+                                    } else {
+                                        if (day.dateString < startDate) {
+                                            setStartDate(day.dateString);
+                                            setEndDate('');
+                                        } else {
+                                            setEndDate(day.dateString);
+                                        }
+                                    }
+                                }}
+                                onMonthChange={(month) => {
+                                    setCurrentMonth(`${month.year}-${pad2(month.month)}`);
+                                }}
+                                markedDates={markedDates}
+                                markingType={'custom'}
+                                firstDay={1}
+                                theme={{
+                                    calendarBackground: "#FFFFFF",
+                                    monthTextColor: "#111827",
+                                    dayTextColor: "#111827",
+                                    textDisabledColor: "rgba(17,24,39,0.35)",
+                                    arrowColor: "#111827",
+                                    todayTextColor: "#111827",
+                                    textSectionTitleColor: "rgba(17,24,39,0.55)",
+                                }}
+                            />
+                            {(startDate || endDate) && (
+                                <View className="mt-[15px] pt-[15px] border-t border-[#eee] px-2">
+                                    <Text className="text-black/70">Початок: <Text className="font-semibold text-[#111827]">{startDate || '-'}</Text></Text>
+                                    <Text className="text-black/70">Кінець: <Text className="font-semibold text-[#111827]">{endDate || '-'}</Text></Text>
+                                </View>
+                            )}
+                        </View>
 
-                {errorText ? (
-                    <View className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mt-4">
-                        <Text className="text-red-700">{errorText}</Text>
-                        <TouchableOpacity onPress={clearError} className="mt-3 bg-black/10 px-4 py-3 rounded-xl self-start">
-                            <Text className="text-[#111827]">Закрити</Text>
+                        <TouchableOpacity
+                            className={`bg-emerald-600/90 border border-emerald-700/60 py-4 rounded-2xl items-center mt-2 ${
+                                loading ? 'bg-emerald-300' : ''
+                            }`}
+                            onPress={handleSubmit}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <ActivityIndicator color="white" />
+                            ) : (
+                                <Text className="text-white text-[16px] font-bold">Зберегти заявку</Text>
+                            )}
                         </TouchableOpacity>
+
+                        {errorText ? (
+                            <View className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mt-4">
+                                <Text className="text-red-700">{errorText}</Text>
+                                <TouchableOpacity onPress={clearError} className="mt-3 bg-black/10 px-4 py-3 rounded-xl self-start">
+                                    <Text className="text-[#111827]">Закрити</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : null}
                     </View>
-                ) : null}
+                </ScrollView>
             </View>
         </SafeAreaView>
     );

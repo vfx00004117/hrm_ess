@@ -110,7 +110,7 @@ export function ScheduleEditModal({
                 <Pressable className="absolute inset-0" onPress={onClose}/>
                 <SafeAreaView className="flex-1" edges={[]} pointerEvents="box-none">
                     <View className="flex-1 justify-end" pointerEvents="box-none">
-                        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} pointerEvents="box-none">
+                        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} pointerEvents="box-none" className="web:max-w-md web:mx-auto w-full">
                             <View className="bg-white rounded-t-3xl px-6 pt-3 pb-4" onStartShouldSetResponder={() => true}>
                                 <View className="flex-row justify-between items-center mb-5">
                                     <View>

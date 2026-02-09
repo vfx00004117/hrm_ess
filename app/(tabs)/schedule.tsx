@@ -125,94 +125,96 @@ export default function ScheduleScreen() {
     }, [selectedEntry]);
 
     return (
-        <SafeAreaView className="flex-1 bg-slate-50 px-4" edges={['top']}>
-            <View className="flex-row items-center">
-                <Text className="text-3xl font-bold mb-3">Графік</Text>
-            </View>
-
-            {isManager ? (
-                <View className="flex-row gap-2 mb-4">
-                    <Pressable
-                        onPress={() => {
-                            setView("me");
-                            setSelectedEmployeeId(null);
-                        }}
-                        className={`px-4 py-2 rounded-xl ${view === "me" ? "bg-black/10" : "bg-black/5"}`}
-                    >
-                        <Text className="text-[#111827]">Мій графік</Text>
-                    </Pressable>
-
-                    <Pressable
-                        onPress={() => {
-                            setView("dept");
-                        }}
-                        className={`px-4 py-2 rounded-xl ${view === "dept" ? "bg-black/10" : "bg-black/5"}`}
-                    >
-                        <Text className="text-[#111827]">Графік підрозділу</Text>
-                    </Pressable>
+        <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+            <View className="flex-1 web:max-w-2xl web:mx-auto w-full px-4">
+                <View className="flex-row items-center">
+                    <Text className="text-3xl font-bold mb-3">Графік</Text>
                 </View>
-            ) : null}
-
-            {isManager && view === "dept" ? (
-                <EmployeePicker
-                    employees={deptEmployees}
-                    selectedEmployeeId={selectedEmployeeId}
-                    onSelect={(id) => setSelectedEmployeeId(id)}
-                />
-            ) : null}
-
-            <View className="bg-white border border-black/10 rounded-2xl p-3">
-                <ScheduleCalendar
-                    monthYM={monthYM}
-                    entries={entries}
-                    selectedDate={selectedDate}
-                    onSelectDate={setSelectedDate}
-                    onChangeMonthYM={setMonthYM}
-                />
-
-                {loading ? (
-                    <View className="absolute inset-0 items-center justify-center bg-white/60 rounded-2xl">
-                        <ActivityIndicator />
-                        <Text className="text-black/70 mt-3">Завантаження…</Text>
-                    </View>
-                ) : errorText ? (
-                    <View className="mt-3 bg-red-500/10 border border-red-500/30 rounded-2xl p-4">
-                        <Text className="text-red-700">{errorText}</Text>
-                        <Pressable onPress={reload} className="mt-3 bg-black/10 px-4 py-3 rounded-xl">
-                            <Text className="text-[#111827]">Спробувати ще</Text>
-                        </Pressable>
-                    </View>
-                ) : null}
-            </View>
-
-            <View className="mt-4 bg-white border border-black/10 rounded-2xl p-4">
-                <Text className="text-[#111827] text-lg font-semibold">{selectedDate}</Text>
-                <Text className="text-black/70 mt-2">{detailsText}</Text>
 
                 {isManager ? (
-                    <Pressable
-                        onPress={() => {
-                            clearActionError();
-                            if (view === "dept" && !selectedEmployeeId) {
-                                handleActionError(new ValidationError("Спочатку оберіть співробітника"));
-                                return;
-                            }
-                            setIsEditModalVisible(true);
-                        }}
-                        className="mt-4 bg-black/10 px-4 py-3 rounded-xl"
-                    >
-                        <Text className="text-[#111827]">Додати / змінити</Text>
-                    </Pressable>
-                ) : null}
+                    <View className="flex-row gap-2 mb-4">
+                        <Pressable
+                            onPress={() => {
+                                setView("me");
+                                setSelectedEmployeeId(null);
+                            }}
+                            className={`px-4 py-2 rounded-xl ${view === "me" ? "bg-black/10" : "bg-black/5"}`}
+                        >
+                            <Text className="text-[#111827]">Мій графік</Text>
+                        </Pressable>
 
-                {actionError ? (
-                    <View className="mt-3 bg-red-500/10 border border-red-500/30 rounded-2xl p-4">
-                        <Text className="text-red-700">{actionError}</Text>
-                        <Pressable onPress={() => clearActionError()} className="mt-2 self-start">
-                            <Text className="text-red-700 font-semibold text-xs">Закрити</Text>
+                        <Pressable
+                            onPress={() => {
+                                setView("dept");
+                            }}
+                            className={`px-4 py-2 rounded-xl ${view === "dept" ? "bg-black/10" : "bg-black/5"}`}
+                        >
+                            <Text className="text-[#111827]">Графік підрозділу</Text>
                         </Pressable>
                     </View>
                 ) : null}
+
+                {isManager && view === "dept" ? (
+                    <EmployeePicker
+                        employees={deptEmployees}
+                        selectedEmployeeId={selectedEmployeeId}
+                        onSelect={(id) => setSelectedEmployeeId(id)}
+                    />
+                ) : null}
+
+                <View className="bg-white border border-black/10 rounded-2xl p-3">
+                    <ScheduleCalendar
+                        monthYM={monthYM}
+                        entries={entries}
+                        selectedDate={selectedDate}
+                        onSelectDate={setSelectedDate}
+                        onChangeMonthYM={setMonthYM}
+                    />
+
+                    {loading ? (
+                        <View className="absolute inset-0 items-center justify-center bg-white/60 rounded-2xl">
+                            <ActivityIndicator />
+                            <Text className="text-black/70 mt-3">Завантаження…</Text>
+                        </View>
+                    ) : errorText ? (
+                        <View className="mt-3 bg-red-500/10 border border-red-500/30 rounded-2xl p-4">
+                            <Text className="text-red-700">{errorText}</Text>
+                            <Pressable onPress={reload} className="mt-3 bg-black/10 px-4 py-3 rounded-xl">
+                                <Text className="text-[#111827]">Спробувати ще</Text>
+                            </Pressable>
+                        </View>
+                    ) : null}
+                </View>
+
+                <View className="mt-4 bg-white border border-black/10 rounded-2xl p-4">
+                    <Text className="text-[#111827] text-lg font-semibold">{selectedDate}</Text>
+                    <Text className="text-black/70 mt-2">{detailsText}</Text>
+
+                    {isManager ? (
+                        <Pressable
+                            onPress={() => {
+                                clearActionError();
+                                if (view === "dept" && !selectedEmployeeId) {
+                                    handleActionError(new ValidationError("Спочатку оберіть співробітника"));
+                                    return;
+                                }
+                                setIsEditModalVisible(true);
+                            }}
+                            className="mt-4 bg-black/10 px-4 py-3 rounded-xl"
+                        >
+                            <Text className="text-[#111827]">Додати / змінити</Text>
+                        </Pressable>
+                    ) : null}
+
+                    {actionError ? (
+                        <View className="mt-3 bg-red-500/10 border border-red-500/30 rounded-2xl p-4">
+                            <Text className="text-red-700">{actionError}</Text>
+                            <Pressable onPress={() => clearActionError()} className="mt-2 self-start">
+                                <Text className="text-red-700 font-semibold text-xs">Закрити</Text>
+                            </Pressable>
+                        </View>
+                    ) : null}
+                </View>
             </View>
 
             <ScheduleEditModal

@@ -110,121 +110,123 @@ export default function StaffManager({ onBack }: Props) {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-[#f5f5f5] px-5 pt-3" edges={['top']}>
-            <View className="flex-row items-center mb-[20px]">
-                <TouchableOpacity onPress={onBack} className="mr-[15px]">
-                    <MaterialIcons name="arrow-back" size={24} color="black" />
-                </TouchableOpacity>
-                <Text className="text-[20px] font-bold">Співробітники</Text>
+        <SafeAreaView className="flex-1 bg-[#f5f5f5]" edges={['top']}>
+            <View className="flex-1 web:max-w-2xl web:mx-auto w-full px-5 pt-3">
+                <View className="flex-row items-center mb-[20px]">
+                    <TouchableOpacity onPress={onBack} className="mr-[15px]">
+                        <MaterialIcons name="arrow-back" size={24} color="black" />
+                    </TouchableOpacity>
+                    <Text className="text-[20px] font-bold">Співробітники</Text>
+                </View>
+
+                <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerClassName="pb-5">
+                    {loadingEmployees ? (
+                        <ActivityIndicator color="#000" className="my-4" />
+                    ) : (
+                        <EmployeePicker
+                            employees={employees}
+                            selectedEmployeeId={selectedEmployeeId}
+                            onSelect={setSelectedEmployeeId}
+                        />
+                    )}
+
+                    {loadingProfile ? (
+                        <ActivityIndicator color="#000" className="my-10" />
+                    ) : profile ? (
+                        <View className="bg-white rounded-2xl p-4 shadow-sm mb-6">
+                            <Text className="text-lg font-bold mb-4">Редагування профілю</Text>
+                            
+                            <View className="mb-4">
+                                <Text className="text-slate-500 mb-1">Email (не редагується)</Text>
+                                <TextInput
+                                    value={profile.email}
+                                    editable={false}
+                                    className="bg-slate-100 p-3 rounded-xl text-slate-500"
+                                />
+                            </View>
+
+                            <View className="mb-4">
+                                <Text className="text-slate-500 mb-1">ПІБ</Text>
+                                <TextInput
+                                    value={fullName}
+                                    onChangeText={setFullName}
+                                    placeholder="Введіть ПІБ"
+                                    className="border border-slate-200 p-3 rounded-xl"
+                                />
+                            </View>
+
+                            <View className="mb-4">
+                                <Text className="text-slate-500 mb-1">Табельний номер</Text>
+                                <TextInput
+                                    value={empNo}
+                                    onChangeText={setEmpNo}
+                                    placeholder="Наприклад: 12345"
+                                    className="border border-slate-200 p-3 rounded-xl"
+                                />
+                            </View>
+
+                            <View className="mb-4">
+                                <Text className="text-slate-500 mb-1">Посада</Text>
+                                <TextInput
+                                    value={position}
+                                    onChangeText={setPosition}
+                                    placeholder="Введіть посаду"
+                                    className="border border-slate-200 p-3 rounded-xl"
+                                />
+                            </View>
+
+                            <View className="mb-4">
+                                <Text className="text-slate-500 mb-1">Дата народження (РРРР-ММ-ДД)</Text>
+                                <TextInput
+                                    value={birthDate}
+                                    onChangeText={setBirthDate}
+                                    placeholder="YYYY-MM-DD"
+                                    className="border border-slate-200 p-3 rounded-xl"
+                                />
+                            </View>
+
+                            <View className="mb-4">
+                                <Text className="text-slate-500 mb-1">Початок роботи (РРРР-ММ-ДД)</Text>
+                                <TextInput
+                                    value={workStart}
+                                    onChangeText={setWorkStart}
+                                    placeholder="YYYY-MM-DD"
+                                    className="border border-slate-200 p-3 rounded-xl"
+                                />
+                            </View>
+
+                            <TouchableOpacity
+                                onPress={handleSave}
+                                disabled={saving}
+                                className={`bg-emerald-600/90 border border-emerald-700/60 py-4 rounded-2xl items-center mt-2 ${saving ? 'opacity-70' : ''}`}
+                            >
+                                {saving ? (
+                                    <ActivityIndicator color="white" />
+                                ) : (
+                                    <Text className="text-white font-bold text-base">Зберегти зміни</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    ) : selectedEmployeeId ? (
+                        <View className="items-center my-10">
+                            <Text className="text-slate-400">Завантаження даних профілю...</Text>
+                        </View>
+                    ) : (
+                        <View className="items-center my-10">
+                            <Text className="text-slate-400">Оберіть співробітника для редагування</Text>
+                        </View>
+                    )}
+
+                    {errorText ? (
+                        <View className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mt-4">
+                            <Text className="text-red-700">{errorText}</Text>
+                            <TouchableOpacity onPress={clearError} className="mt-3 bg-black/10 px-4 py-3 rounded-xl self-start">
+                                <Text className="text-[#111827]">Закрити</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : null}
+                </ScrollView>
             </View>
-
-            <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerClassName="pb-5">
-                {loadingEmployees ? (
-                    <ActivityIndicator color="#000" className="my-4" />
-                ) : (
-                    <EmployeePicker
-                        employees={employees}
-                        selectedEmployeeId={selectedEmployeeId}
-                        onSelect={setSelectedEmployeeId}
-                    />
-                )}
-
-                {loadingProfile ? (
-                    <ActivityIndicator color="#000" className="my-10" />
-                ) : profile ? (
-                    <View className="bg-white rounded-2xl p-4 shadow-sm mb-6">
-                        <Text className="text-lg font-bold mb-4">Редагування профілю</Text>
-                        
-                        <View className="mb-4">
-                            <Text className="text-slate-500 mb-1">Email (не редагується)</Text>
-                            <TextInput
-                                value={profile.email}
-                                editable={false}
-                                className="bg-slate-100 p-3 rounded-xl text-slate-500"
-                            />
-                        </View>
-
-                        <View className="mb-4">
-                            <Text className="text-slate-500 mb-1">ПІБ</Text>
-                            <TextInput
-                                value={fullName}
-                                onChangeText={setFullName}
-                                placeholder="Введіть ПІБ"
-                                className="border border-slate-200 p-3 rounded-xl"
-                            />
-                        </View>
-
-                        <View className="mb-4">
-                            <Text className="text-slate-500 mb-1">Табельний номер</Text>
-                            <TextInput
-                                value={empNo}
-                                onChangeText={setEmpNo}
-                                placeholder="Наприклад: 12345"
-                                className="border border-slate-200 p-3 rounded-xl"
-                            />
-                        </View>
-
-                        <View className="mb-4">
-                            <Text className="text-slate-500 mb-1">Посада</Text>
-                            <TextInput
-                                value={position}
-                                onChangeText={setPosition}
-                                placeholder="Введіть посаду"
-                                className="border border-slate-200 p-3 rounded-xl"
-                            />
-                        </View>
-
-                        <View className="mb-4">
-                            <Text className="text-slate-500 mb-1">Дата народження (РРРР-ММ-ДД)</Text>
-                            <TextInput
-                                value={birthDate}
-                                onChangeText={setBirthDate}
-                                placeholder="YYYY-MM-DD"
-                                className="border border-slate-200 p-3 rounded-xl"
-                            />
-                        </View>
-
-                        <View className="mb-4">
-                            <Text className="text-slate-500 mb-1">Початок роботи (РРРР-ММ-ДД)</Text>
-                            <TextInput
-                                value={workStart}
-                                onChangeText={setWorkStart}
-                                placeholder="YYYY-MM-DD"
-                                className="border border-slate-200 p-3 rounded-xl"
-                            />
-                        </View>
-
-                        <TouchableOpacity
-                            onPress={handleSave}
-                            disabled={saving}
-                            className={`bg-emerald-600/90 border border-emerald-700/60 py-4 rounded-2xl items-center mt-2 ${saving ? 'opacity-70' : ''}`}
-                        >
-                            {saving ? (
-                                <ActivityIndicator color="white" />
-                            ) : (
-                                <Text className="text-white font-bold text-base">Зберегти зміни</Text>
-                            )}
-                        </TouchableOpacity>
-                    </View>
-                ) : selectedEmployeeId ? (
-                    <View className="items-center my-10">
-                        <Text className="text-slate-400">Завантаження даних профілю...</Text>
-                    </View>
-                ) : (
-                    <View className="items-center my-10">
-                        <Text className="text-slate-400">Оберіть співробітника для редагування</Text>
-                    </View>
-                )}
-
-                {errorText ? (
-                    <View className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mt-4">
-                        <Text className="text-red-700">{errorText}</Text>
-                        <TouchableOpacity onPress={clearError} className="mt-3 bg-black/10 px-4 py-3 rounded-xl self-start">
-                            <Text className="text-[#111827]">Закрити</Text>
-                        </TouchableOpacity>
-                    </View>
-                ) : null}
-            </ScrollView>
         </SafeAreaView>
     );
 }

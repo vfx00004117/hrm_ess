@@ -95,53 +95,55 @@ export default function ProfileScreen() {
     }, [profile]);
 
     return (
-        <SafeAreaView className="flex-1 bg-slate-50 px-4" edges={['top']}>
-            <Text className="text-3xl font-bold mb-3">Профіль</Text>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-5">
-                <View className="rounded-2xl bg-white p-4 shadow-sm">
-                    <View className="gap-4">
-                        <ProfileRow label="ПІБ" value={viewModel.fullName}/>
-                        <View className="h-px bg-slate-100"/>
+        <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+            <View className="flex-1 web:max-w-md web:mx-auto w-full px-4">
+                <Text className="text-3xl font-bold mb-3">Профіль</Text>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-5">
+                    <View className="rounded-2xl bg-white p-4 shadow-sm">
+                        <View className="gap-4">
+                            <ProfileRow label="ПІБ" value={viewModel.fullName}/>
+                            <View className="h-px bg-slate-100"/>
 
-                        <ProfileRow label="Email" value={viewModel.email}/>
-                        <View className="h-px bg-slate-100"/>
+                            <ProfileRow label="Email" value={viewModel.email}/>
+                            <View className="h-px bg-slate-100"/>
 
-                        <ProfileRow label="Табельний номер" value={viewModel.empNo}/>
-                        <View className="h-px bg-slate-100"/>
+                            <ProfileRow label="Табельний номер" value={viewModel.empNo}/>
+                            <View className="h-px bg-slate-100"/>
 
-                        <ProfileRow label="Підрозділ" value={viewModel.depName}/>
-                        <View className="h-px bg-slate-100"/>
+                            <ProfileRow label="Підрозділ" value={viewModel.depName}/>
+                            <View className="h-px bg-slate-100"/>
 
-                        <ProfileRow label="Посада" value={viewModel.position}/>
-                        <View className="h-px bg-slate-100"/>
+                            <ProfileRow label="Посада" value={viewModel.position}/>
+                            <View className="h-px bg-slate-100"/>
 
-                        <ProfileRow label="Дата народження" value={viewModel.birthDate}/>
-                        <View className="h-px bg-slate-100"/>
+                            <ProfileRow label="Дата народження" value={viewModel.birthDate}/>
+                            <View className="h-px bg-slate-100"/>
 
-                        <ProfileRow label="Початок роботи" value={viewModel.workStart}/>
+                            <ProfileRow label="Початок роботи" value={viewModel.workStart}/>
+                        </View>
                     </View>
-                </View>
-                {loading ? (
-                    <View className="py-8 items-center absolute inset-0 justify-center bg-white/60 rounded-2xl">
-                        <ActivityIndicator />
-                        <Text className="text-black/70 mt-3">Завантаження…</Text>
-                    </View>
-                ) : errorText ? (
-                    <View className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mt-4">
-                        <Text className="text-red-700">{errorText}</Text>
-                        <Pressable onPress={() => loadProfile()} className="mt-3 bg-black/10 px-4 py-3 rounded-xl">
-                            <Text className="text-[#111827]">Спробувати ще</Text>
+                    {loading ? (
+                        <View className="py-8 items-center absolute inset-0 justify-center bg-white/60 rounded-2xl">
+                            <ActivityIndicator />
+                            <Text className="text-black/70 mt-3">Завантаження…</Text>
+                        </View>
+                    ) : errorText ? (
+                        <View className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mt-4">
+                            <Text className="text-red-700">{errorText}</Text>
+                            <Pressable onPress={() => loadProfile()} className="mt-3 bg-black/10 px-4 py-3 rounded-xl">
+                                <Text className="text-[#111827]">Спробувати ще</Text>
+                            </Pressable>
+                        </View>
+                    ) : null}
+                    <View className="mt-4">
+                        <Pressable
+                            onPress={handleSignOut}
+                            className="rounded-2xl bg-red-500 py-4 items-center active:bg-red-600 border border-red-500/20">
+                            <Text className="text-base font-semibold text-white">Вийти</Text>
                         </Pressable>
                     </View>
-                ) : null}
-                <View className="mt-4">
-                    <Pressable
-                        onPress={handleSignOut}
-                        className="rounded-2xl bg-red-500 py-4 items-center active:bg-red-600 border border-red-500/20">
-                        <Text className="text-base font-semibold text-white">Вийти</Text>
-                    </Pressable>
-                </View>
-            </ScrollView>
+                </ScrollView>
+            </View>
         </SafeAreaView>
     );
 }

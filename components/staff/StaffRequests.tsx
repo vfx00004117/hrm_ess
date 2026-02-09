@@ -114,37 +114,39 @@ export default function StaffRequests({ onBack }: StaffRequestsProps) {
     }
 
     return (
-        <SafeAreaView className="flex-1 bg-[#f5f5f5] px-5 pt-3" edges={['top']}>
-            <View className="flex-row items-center mb-[20px]">
-                <TouchableOpacity onPress={onBack} className="mr-[15px]">
-                    <MaterialIcons name="arrow-back" size={24} color="black" />
-                </TouchableOpacity>
-                <Text className="text-[20px] font-bold">Заявки на зміни</Text>
-            </View>
-
-            <FlatList
-                data={requests}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={renderItem}
-                refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-                }
-                ListEmptyComponent={
-                    <View className="items-center mt-[50px]">
-                        <Text className="text-[16px] text-[#999]">Немає нових заявок</Text>
-                    </View>
-                }
-                contentContainerClassName="pb-5"
-            />
-
-            {errorText ? (
-                <View className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mb-4">
-                    <Text className="text-red-700">{errorText}</Text>
-                    <TouchableOpacity onPress={clearError} className="mt-3 bg-black/10 px-4 py-3 rounded-xl self-start">
-                        <Text className="text-[#111827]">Закрити</Text>
+        <SafeAreaView className="flex-1 bg-[#f5f5f5]" edges={['top']}>
+            <View className="flex-1 web:max-w-2xl web:mx-auto w-full px-5 pt-3">
+                <View className="flex-row items-center mb-[20px]">
+                    <TouchableOpacity onPress={onBack} className="mr-[15px]">
+                        <MaterialIcons name="arrow-back" size={24} color="black" />
                     </TouchableOpacity>
+                    <Text className="text-[20px] font-bold">Заявки на зміни</Text>
                 </View>
-            ) : null}
+
+                <FlatList
+                    data={requests}
+                    keyExtractor={(item) => item.id.toString()}
+                    renderItem={renderItem}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                    }
+                    ListEmptyComponent={
+                        <View className="items-center mt-[50px]">
+                            <Text className="text-[16px] text-[#999]">Немає нових заявок</Text>
+                        </View>
+                    }
+                    contentContainerClassName="pb-5"
+                />
+
+                {errorText ? (
+                    <View className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mb-4">
+                        <Text className="text-red-700">{errorText}</Text>
+                        <TouchableOpacity onPress={clearError} className="mt-3 bg-black/10 px-4 py-3 rounded-xl self-start">
+                            <Text className="text-[#111827]">Закрити</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : null}
+            </View>
         </SafeAreaView>
     );
 }
