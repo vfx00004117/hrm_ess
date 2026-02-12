@@ -48,6 +48,7 @@ __pycache__/
 venv/
 build/
 /backend/AddProfile.txt
+backend/docker-compose.yml
 /app/git_commit_memo.txt
 /app/startup_memo.txt
 /schedule_changes.log

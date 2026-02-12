@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { API_BASE_URL } from "@/lib/config";
-import { useAuth } from "./AuthContext";
+import { useAuth } from "@/components/auth/AuthContext";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { login } from "@/lib/api/auth";
 

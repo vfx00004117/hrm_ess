@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { useAuth } from "../(auth)/AuthContext";
+import { useAuth } from "@/components/auth/AuthContext";
 
 import { setupCalendarLocaleUA } from "@/lib/calendar/localeUA";
 import { API_BASE_URL } from "@/lib/config";

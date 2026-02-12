@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import {SafeAreaView} from "react-native-safe-area-context";
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuth } from '@/app/(auth)/AuthContext';
+import { useAuth } from '@/components/auth/AuthContext';
 import { API_BASE_URL } from '@/lib/config';
 import { getAllServiceRequests, updateServiceRequestStatus, ServiceRequest } from '@/lib/api/services';
 import { useErrorHandler } from '@/hooks/useErrorHandler';

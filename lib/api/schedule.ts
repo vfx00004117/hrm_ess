@@ -82,8 +82,8 @@ export async function deleteDaySchedule(
     targetUserId?: number | null
 ) {
     const url = targetUserId
-        ? `${base}/schedule/day/${targetUserId}?date=${date}`
-        : `${base}/schedule/day/me?date=${date}`;
+        ? `${base}/schedule/delete/${targetUserId}?date=${date}`
+        : `${base}/schedule/delete/me?date=${date}`;
 
     const res = await fetch(url, {
         method: "DELETE",

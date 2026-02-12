@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
 import "./globals.css";
-import { AuthProvider } from "./(auth)/AuthContext";
-import { RootGate } from "./(auth)/RootGate";
+import { AuthProvider } from "@/components/auth/AuthContext";
+import { RootGate } from "@/components/auth/RootGate";
 import {StatusBar} from "expo-status-bar";
 
 export default function RootLayout() {

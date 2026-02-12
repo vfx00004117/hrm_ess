@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { API_BASE_URL } from "@/lib/config";
-import { useAuth } from "@/app/(auth)/AuthContext";
+import { useAuth } from "@/components/auth/AuthContext";
 import { EmployeePicker } from "@/components/schedule/EmployeePicker";
 import type { DeptEmployee } from "@/lib/schedule/types";
 import { getDeptEmployees } from "@/lib/api/schedule";

@@ -3,7 +3,7 @@ import React, {useCallback, useMemo, useState, useRef} from 'react';
 import {SafeAreaView} from "react-native-safe-area-context";
 import {router, useFocusEffect} from "expo-router";
 import { API_BASE_URL } from "@/lib/config";
-import { useAuth } from "@/app/(auth)/AuthContext";
+import { useAuth } from "@/components/auth/AuthContext";
 import { getMyProfile, type ProfileOut } from "@/lib/api/profile";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { AuthError } from "@/lib/errors";

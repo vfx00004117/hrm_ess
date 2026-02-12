@@ -225,7 +225,7 @@ def add_user_schedule_for_range(
     return ScheduleRangeResultOut(created=created, updated=updated, skipped=skipped)
 
 
-@router.delete("/schedule/day/me")
+@router.delete("/schedule/delete/me")
 def delete_my_schedule_for_day(
         date_str: str = Query(..., alias="date", pattern=r"^\d{4}-\d{2}-\d{2}$"),
         current_user: User = Depends(get_current_user),
@@ -260,7 +260,7 @@ def delete_my_schedule_for_day(
     return {"ok": True}
 
 
-@router.delete("/schedule/day/{user_id}")
+@router.delete("/schedule/delete/{user_id}")
 def delete_user_schedule_for_day(
         user_id: int,
         date_str: str = Query(..., alias="date", pattern=r"^\d{4}-\d{2}-\d{2}$"),

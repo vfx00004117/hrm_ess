@@ -27,6 +27,7 @@ def get_current_user(
         creds: HTTPAuthorizationCredentials = Depends(bearer),
         db: Session = Depends(get_db),
 ) -> User:
+    """Authenticates user from JWT token; returns user"""
     token = creds.credentials
     try:
         payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALG])

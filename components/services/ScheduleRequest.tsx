@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Calendar } from 'react-native-calendars';
-import { useAuth } from '@/app/(auth)/AuthContext';
+import { useAuth } from '@/components/auth/AuthContext';
 import { API_BASE_URL } from '@/lib/config';
 import { createServiceRequest } from '@/lib/api/services';
 import { getMySchedule } from '@/lib/api/schedule';

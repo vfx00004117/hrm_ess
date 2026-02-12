@@ -1,7 +1,7 @@
 import React from 'react';
 import {Tabs} from "expo-router";
 import {MaterialIcons} from "@expo/vector-icons";
-import {useAuth} from "@/app/(auth)/AuthContext";
+import {useAuth} from "@/components/auth/AuthContext";
 
 export default function TabLayout() {
     const { role, isReady } = useAuth();

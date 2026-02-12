@@ -102,7 +102,7 @@ def assign_employee_department(
     return {"ok": True, "department_id": prof.department_id}
 
 
-@router.put("/departments/update/{department_id}", response_model=DepartmentOut)
+@router.patch("/departments/update/{department_id}", response_model=DepartmentOut)
 def update_department(
         department_id: int,
         payload: DepartmentUpdateIn,

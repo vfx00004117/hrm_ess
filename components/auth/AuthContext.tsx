@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { clearAccessToken, decodeJwtPayload, getAccessToken, isTokenExpired, setAccessToken } from "./auth";
+import { clearAccessToken, decodeJwtPayload, getAccessToken, isTokenExpired, setAccessToken } from "../../lib/api/auth";
 
 type Role = "employee" | "manager";
 
