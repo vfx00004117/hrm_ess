@@ -18,7 +18,6 @@ from ..logger import log_schedule_change
 router = APIRouter(tags=["service_requests"])
 
 def apply_request_to_schedule(db: Session, req: ServiceRequest, manager: User):
-    """Прикладає схвалену заявку до розкладу."""
     dates = [
         req.start_date + timedelta(days=x)
         for x in range((req.end_date - req.start_date).days + 1)
@@ -78,7 +77,7 @@ def create_service_request(
         status=status
     )
     db.add(req)
-    db.flush()  # Отримуємо ID
+    db.flush()
     
     db.commit()
     db.refresh(req)
@@ -105,7 +104,6 @@ def get_all_service_requests(
     manager: User = Depends(require_manager),
     db: Session = Depends(get_db)
 ):
-    # Знаходимо підрозділи, якими керує цей менеджер
     managed_depts = db.execute(
         select(Department.id).where(Department.manager_user_id == manager.id)
     ).scalars().all()
@@ -144,7 +142,6 @@ def update_service_request_status(
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
     
-    # Перевірка: чи належить користувач до підрозділу, яким керує менеджер
     managed_depts = db.execute(
         select(Department.id).where(Department.manager_user_id == manager.id)
     ).scalars().all()

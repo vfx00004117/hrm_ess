@@ -24,6 +24,11 @@ type Props = {
     onBack: () => void;
 };
 
+/**
+ * Компонент управління персоналом.
+ * Дозволяє менеджеру переглядати список співробітників свого відділу,
+ * переглядати та редагувати їхні профілі (ПІБ, табельний номер, посада тощо).
+ */
 export default function StaffManager({ onBack }: Props) {
     const { token } = useAuth();
     const [employees, setEmployees] = useState<DeptEmployee[]>([]);
@@ -34,13 +39,13 @@ export default function StaffManager({ onBack }: Props) {
     const [saving, setSaving] = useState(false);
     const { errorText, handleError, clearError } = useErrorHandler();
 
-    // Поля форми
     const [fullName, setFullName] = useState("");
     const [empNo, setEmpNo] = useState("");
     const [position, setPosition] = useState("");
     const [birthDate, setBirthDate] = useState("");
     const [workStart, setWorkStart] = useState("");
 
+    // Завантаження списку співробітників відділу менеджера
     const loadEmployees = useCallback(async () => {
         if (!token) return;
         setLoadingEmployees(true);
@@ -59,6 +64,7 @@ export default function StaffManager({ onBack }: Props) {
         loadEmployees();
     }, [loadEmployees]);
 
+    // Завантаження детального профілю конкретного співробітника для редагування
     const loadEmployeeProfile = useCallback(async (id: number) => {
         if (!token) return;
         setLoadingProfile(true);
@@ -86,6 +92,7 @@ export default function StaffManager({ onBack }: Props) {
         }
     }, [selectedEmployeeId, loadEmployeeProfile]);
 
+    // Оновлення даних профілю співробітника на сервері
     const handleSave = async () => {
         if (!token || !selectedEmployeeId) return;
         setSaving(true);
@@ -100,7 +107,6 @@ export default function StaffManager({ onBack }: Props) {
             });
 
             Alert.alert("Успіх", "Профіль співробітника оновлено");
-            // Оновлюємо список співробітників, якщо ПІБ змінилося
             loadEmployees();
         } catch (e: any) {
             handleError(e);

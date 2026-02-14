@@ -6,7 +6,6 @@ import {useAuth} from "@/components/auth/AuthContext";
 export default function TabLayout() {
     const { role, isReady } = useAuth();
 
-    //не показуємо ролі employee вкладку requests
     if (!isReady) return null;
     const isManager = role === "manager";
 

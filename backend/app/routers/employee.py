@@ -67,7 +67,6 @@ def get_employee_profile(
     return profile_to_out(profile)
 
 
-# FIX: було /employee/profile/add/{user.id}
 @router.put("/employee/profile/add/{user_id}", response_model=ProfileOut)
 def add_or_update_profile(
         user_id: int,

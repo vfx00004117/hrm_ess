@@ -11,6 +11,10 @@ type Params = {
     monthYM: string;
 };
 
+/**
+ * Спеціалізований хук для роботи з графіком роботи за місяць.
+ * Підтримує два режими: перегляд власного графіка та перегляд графіка підлеглих (для менеджерів).
+ */
 export function useScheduleMonth(p: Params) {
     const {
         apiBase,
@@ -29,6 +33,7 @@ export function useScheduleMonth(p: Params) {
 
     const abortRef = useRef<AbortController | null>(null);
 
+    // Функція завантаження даних. Використовує AbortController для скасування попередніх запитів.
     const load = useCallback(async () => {
         if (!token) return;
 
@@ -41,6 +46,7 @@ export function useScheduleMonth(p: Params) {
 
         try {
             if (isManager && view === "dept") {
+                // Режим менеджера: завантаження списку співробітників підрозділу та графіка обраного працівника
                 let currentEmployees = deptEmployees;
                 if (currentEmployees.length === 0) {
                     currentEmployees = await getDeptEmployees(apiBase, token, controller.signal);
@@ -93,6 +99,7 @@ export function useScheduleMonth(p: Params) {
         return () => abortRef.current?.abort();
     }, [load]);
 
+    // Створення карти (Map) для швидкого пошуку записів за датою (YYYY-MM-DD)
     const entryByDate = useMemo(() => {
         const m = new Map<string, ScheduleEntry>();
         entries.forEach((e) => m.set(e.date, e));

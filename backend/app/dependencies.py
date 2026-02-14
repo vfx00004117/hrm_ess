@@ -27,7 +27,6 @@ def get_current_user(
         creds: HTTPAuthorizationCredentials = Depends(bearer),
         db: Session = Depends(get_db),
 ) -> User:
-    """Authenticates user from JWT token; returns user"""
     token = creds.credentials
     try:
         payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALG])
@@ -73,7 +72,6 @@ def assert_user_is_manager(db: Session, user_id: int) -> None:
 
 
 def month_bounds(month: str) -> tuple[date, date]:
-    """Return [first_day, next_month_first) bounds for YYYY-MM."""
     year = int(month[:4])
     mon = int(month[5:7])
     first_day = date(year, mon, 1)

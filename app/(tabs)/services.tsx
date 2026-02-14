@@ -36,7 +36,6 @@ const Services = () => {
                         title="[placeholder]"
                         icon="file-copy"
                     />
-                    {/* Інші сервіси можна додати тут */}
                 </View>
             </View>
         </SafeAreaView>

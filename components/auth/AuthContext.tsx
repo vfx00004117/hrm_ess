@@ -14,12 +14,18 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+/**
+ * Провайдер контексту авторизації.
+ * Відповідає за збереження токена, визначення ролі користувача (співробітник/менеджер)
+ * та надання методів для входу та виходу.
+ */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isReady, setIsReady] = useState(false);
     const [token, setToken] = useState<string | null>(null);
     const [role, setRole] = useState<Role | null>(null);
     const [userId, setUserId] = useState<number | null>(null);
 
+    // Ініціалізація стану при запуску додатка: перевірка наявності та валідності збереженого токена
     useEffect(() => {
         (async () => {
             const stored = await getAccessToken();
@@ -43,6 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role,
         userId,
         signIn: async (newToken: string) => {
+            // Зберігаємо новий токен та оновлюємо стан профілю
             await setAccessToken(newToken);
             setToken(newToken);
             const payload = decodeJwtPayload(newToken);
@@ -50,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUserId(payload?.uid ? Number(payload.uid) : null);
         },
         signOut: async () => {
+            // Очищаємо дані при виході
             await clearAccessToken();
             setToken(null);
             setRole(null);
@@ -60,6 +68,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+/**
+ * Хук для зручного доступу до контексту авторизації.
+ * @throws Помилка, якщо хук використовується поза AuthProvider.
+ */
 export function useAuth() {
     const ctx = useContext(AuthContext);
     if (!ctx) throw new Error("useAuth must be used within AuthProvider");
